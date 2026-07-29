@@ -5,9 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>WorkFlowPro</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WorkFlowPro">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>html,body,#root{margin:0;padding:0;min-height:100vh;}</style>
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    });
+  }
+</script>
 <script type="importmap">
 {
   "imports": {
@@ -25,6 +39,28 @@
 </head>
 <body>
 <div id="root"></div>
+<button id="pwaInstallBtn" style="display:none;position:fixed;bottom:20px;right:20px;z-index:99999;padding:12px 18px;border:none;border-radius:999px;background:#4f46e5;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(79,70,229,.4);cursor:pointer;">
+  ⬇ Cài đặt ứng dụng
+</button>
+<script>
+  let deferredPrompt = null;
+  const installBtn = document.getElementById("pwaInstallBtn");
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.style.display = "block";
+  });
+  installBtn.addEventListener("click", async () => {
+    if (!deferredPrompt) return;
+    installBtn.style.display = "none";
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice;
+    deferredPrompt = null;
+  });
+  window.addEventListener("appinstalled", () => {
+    installBtn.style.display = "none";
+  });
+</script>
 <script type="text/babel" data-presets="react" data-type="module">
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
