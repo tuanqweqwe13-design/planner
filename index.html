@@ -2350,6 +2350,13 @@ const removeProject = (id) => {
                           <div style={{ fontSize: 11, color: isOnline ? "#10b981" : "#94a3b8", fontWeight: 600 }}>{isOnline ? "Online" : "Offline"}</div>
                         </div>
                       </div>
+                      <button onClick={() => {
+                        if (confirm("Bạn có chắc chắn muốn xóa người bạn này?")) {
+                          setFriends(prev => prev.filter(x => x.id !== f.id));
+                        }
+                      }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-border)", padding: 6, opacity: 0.6, transition: "all 0.2s" }} title="Xóa bạn bè" onMouseEnter={(e) => { e.currentTarget.style.opacity = 1; e.currentTarget.style.color = "#ef4444"; }} onMouseLeave={(e) => { e.currentTarget.style.opacity = 0.6; e.currentTarget.style.color = "var(--wf-border)"; }}>
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   );
                 })
