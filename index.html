@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
 <title>WorkFlowPro</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📅</text></svg>">
 <link rel="manifest" href="manifest.json">
@@ -14,7 +14,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<style>html,body,#root{margin:0;padding:0;min-height:100vh;}</style>
+<style>html,body,#root{margin:0;padding:0;min-height:100dvh;}</style>
 <script>
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
@@ -39,7 +39,9 @@
 </head>
 <body>
 <div id="root"></div>
-<button id="pwaInstallBtn" style="display:none;position:fixed;bottom:20px;right:20px;z-index:99999;padding:12px 18px;border:none;border-radius:999px;background:#4f46e5;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(79,70,229,.4);cursor:pointer;">
+
+
+                <button id="pwaInstallBtn" style="display:none;position:fixed;bottom:20px;right:20px;z-index:99999;padding:12px 18px;border:none;border-radius:999px;background:#4f46e5;color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(79,70,229,.4);cursor:pointer;">
   ⬇ Cài đặt ứng dụng
 </button>
 <script>
@@ -72,7 +74,7 @@ import {
   CheckSquare, FolderLock, Users, FolderKanban, UserCog, LayoutDashboard,
   BarChart3, Settings, Plus, Bell, Clock, X, ChevronRight, ChevronLeft, Trash2, Check,
   Timer, Flame, Award, MessageSquare, Paperclip, Lock, ArrowLeft, ChevronDown, Repeat, CalendarClock, BookOpen, GripVertical, FileText,
-  Play, Pause, RotateCcw, Maximize2, Minimize2, TrendingUp, Calendar, Coffee, Sparkles, Volume2, VolumeX, Star, ChevronUp, PieChart, Zap, Link2, Edit2
+  Play, Pause, RotateCcw, Maximize2, Minimize2, TrendingUp, Calendar, Coffee, Sparkles, Volume2, VolumeX, Star, ChevronUp, PieChart, Zap, Link2, Edit2, User
 } from "lucide-react";
 
 // ---------------- sound engine (synthesized, no assets needed) ----------------
@@ -85,28 +87,38 @@ const getCtx = () => {
   if (audioCtx.state === "suspended") audioCtx.resume();
   return audioCtx;
 };
-const tone = (freq, start, dur, type = "sine", gain = 0.09) => {
+const tone = (freq, start, dur, type = "sine", gain = 0.09, endFreq = null) => {
   const ctx = getCtx();
   const osc = ctx.createOscillator();
   const g = ctx.createGain();
   osc.type = type;
   osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+  if (endFreq) {
+    osc.frequency.exponentialRampToValueAtTime(endFreq, ctx.currentTime + start + dur);
+  }
   g.gain.setValueAtTime(0, ctx.currentTime + start);
   g.gain.linearRampToValueAtTime(gain, ctx.currentTime + start + 0.01);
   g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
   osc.connect(g).connect(ctx.destination);
   osc.start(ctx.currentTime + start);
-  osc.stop(ctx.currentTime + start + dur + 0.02);
+  osc.stop(ctx.currentTime + start + dur + 0.05);
 };
+
 const sounds = {
-  done: () => { tone(880, 0, 0.12, "sine", 0.08); tone(1318, 0.08, 0.18, "sine", 0.07); },
-  undone: () => tone(400, 0, 0.1, "sine", 0.06),
-  add: () => { tone(660, 0, 0.08, "triangle", 0.07); tone(880, 0.05, 0.12, "triangle", 0.06); },
-  remove: () => { tone(500, 0, 0.08, "sawtooth", 0.05); tone(300, 0.06, 0.12, "sawtooth", 0.04); },
-  click: () => tone(700, 0, 0.05, "sine", 0.04),
-  pomodoro: () => { tone(523, 0, 0.1, "sine", 0.07); tone(659, 0.1, 0.1, "sine", 0.07); tone(784, 0.2, 0.16, "sine", 0.07); },
-  comment: () => tone(950, 0, 0.07, "sine", 0.05),
-  celebrate: () => { [523, 659, 784, 1046].forEach((f, i) => tone(f, i * 0.09, 0.16, "sine", 0.08)); },
+  done: () => { 
+    tone(523.25, 0, 0.12, "sine", 0.08); 
+    tone(659.25, 0.05, 0.12, "sine", 0.08); 
+    tone(783.99, 0.1, 0.2, "sine", 0.07); 
+    tone(1046.50, 0.15, 0.35, "sine", 0.06); 
+  },
+  undone: () => tone(400, 0, 0.15, "sine", 0.06, 250),
+  add: () => { tone(500, 0, 0.08, "sine", 0.05); tone(800, 0.06, 0.12, "sine", 0.06); },
+  remove: () => { tone(600, 0, 0.08, "triangle", 0.04, 300); tone(400, 0.05, 0.1, "triangle", 0.04, 200); },
+  click: () => tone(800, 0, 0.06, "sine", 0.05, 300),
+  pomodoro: () => { tone(880, 0, 0.6, "sine", 0.07); tone(1108.73, 0, 0.6, "sine", 0.07); tone(1318.51, 0, 0.8, "sine", 0.06); },
+  comment: () => { tone(700, 0, 0.05, "sine", 0.04, 500); tone(900, 0.07, 0.05, "sine", 0.04, 700); },
+  celebrate: () => { [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98].forEach((f, i) => tone(f, i * 0.06, 0.25, "sine", 0.07)); },
+  error: () => { tone(300, 0, 0.15, "sawtooth", 0.04, 250); }
 };
 const playSound = (name, enabled) => { if (!enabled) return; try { sounds[name] && sounds[name](); } catch (e) {} };
 
@@ -158,7 +170,8 @@ const GlobalStyles = () => (
       --wf-modal-overlay: rgba(2,6,23,0.8);
       --wf-tabbar-bg: rgba(30,41,59,0.94);
     }
-    * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; }
+    * { box-sizing: border-box; font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif; -webkit-tap-highlight-color: transparent; }
+    html, body { overscroll-behavior-y: none; }
     .wf-dark input, .wf-dark textarea, .wf-dark select { background: var(--wf-input-bg); color: var(--wf-text); }
     .wf-dark ::-webkit-scrollbar-thumb { background: rgba(139,92,246,0.32); }
 
@@ -371,7 +384,7 @@ const GlobalStyles = () => (
        BREAKPOINT: 1024px (Tablet)
        ============================================================ */
     @media (max-width: 1024px) {
-      .wf-dash-row2-grid { grid-template-columns: 1fr; }
+      .wf-dash-row1-grid, .wf-dash-row2-grid, .wf-dash-row3-grid { grid-template-columns: 1fr !important; }
       .wf-pomo-grid { grid-template-columns: 1fr; }
       .wf-grid-3 { grid-template-columns: repeat(2, 1fr); }
     }
@@ -382,7 +395,7 @@ const GlobalStyles = () => (
     @media (max-width: 768px) {
       /* Layout */
       .wf-layout { flex-direction: column !important; }
-      .wf-sidebar { position: fixed !important; top: 0; left: 0; bottom: 0; height: 100vh !important; margin: 0 !important; border-radius: 0 !important; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); z-index: 100 !important; }
+      .wf-sidebar { position: fixed !important; top: 0; left: 0; bottom: 0; height: 100dvh !important; margin: 0 !important; border-radius: 0 !important; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); z-index: 100 !important; }
       .wf-sidebar.open { transform: translateX(0); }
       .wf-main { width: 100% !important; padding: 12px 16px !important; }
       .wf-hamburger { display: flex !important; }
@@ -410,6 +423,9 @@ const GlobalStyles = () => (
       /* Task list */
       .wf-task-actions { flex-direction: row; gap: 4px; }
       .wf-task-actions .wf-btn { font-size: 0; padding: 6px; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; }
+      
+      /* Inputs zoom prevention */
+      .wf-input, textarea, select { font-size: 16px !important; }
     }
 
     /* ============================================================
@@ -597,9 +613,9 @@ const chartData = [
 
 
 const sectionColors = {
-  "Không Gian Làm Việc": ["#818cf8", "#6366f1"], // Indigo
-  "Không Gian Nhóm": ["#2dd4bf", "#0d9488"],     // Teal
-  "Báo Cáo & Tài Nguyên": ["#fb923c", "#ea580c"], // Orange
+  "Quản Lý Công Việc": ["#818cf8", "#6366f1"], // Indigo
+  "Tiện Ích Năng Suất": ["#2dd4bf", "#0d9488"],     // Teal
+  "Tài Nguyên & Cài Đặt": ["#fb923c", "#ea580c"], // Orange
 };
 const sortByDone = (ts) => [...ts].sort((a,b) => (a.status === "done" ? 1 : 0) - (b.status === "done" ? 1 : 0));
 const hexToRgba = (hex, alpha) => {
@@ -629,19 +645,16 @@ const navSections = {
   "Tổng Quan": [
     { label: "Bảng Điều Khiển", icon: LayoutDashboard },
   ],
-  "Không Gian Làm Việc": [
+  "Quản Lý Công Việc": [
     { label: "Công Việc Của Tôi", icon: CheckSquare },
-    { label: "Dự Án Cá Nhân", icon: FolderKanban },
+    { label: "Dự Án", icon: FolderKanban },
+  ],
+  "Tiện Ích Năng Suất": [
     { label: "Lịch", icon: Calendar },
     { label: "Habit Tracker", icon: Repeat },
     { label: "Pomodoro", icon: Timer },
   ],
-  "Không Gian Nhóm": [
-    { label: "Công Việc Nhóm", icon: Users },
-    { label: "Hồ Sơ & Bạn Bè", icon: UserCog },
-    { label: "Trò Chuyện", icon: MessageSquare },
-  ],
-  "Báo Cáo & Tài Nguyên": [
+  "Tài Nguyên & Cài Đặt": [
     { label: "Báo Cáo", icon: BarChart3 },
     { label: "Hướng Dẫn", icon: BookOpen },
     { label: "Cài Đặt", icon: Settings },
@@ -703,7 +716,7 @@ function AuthScreen({ onAuthed }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+    <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
       <form onSubmit={submit} style={{ width: 360, background: "#fff", borderRadius: 16, padding: 32, boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
         <h1 style={{ margin: "0 0 4px", fontSize: 22, fontFamily: "'Space Grotesk',sans-serif" }}>WorkFlowPro</h1>
         <p style={{ margin: "0 0 20px", color: "#64748b", fontSize: 14 }}>
@@ -778,10 +791,10 @@ function WorkspaceScreen({ session, onReady }) {
     onReady(data);
   };
 
-  if (workspaces === null) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Đang tải...</div>;
+  if (workspaces === null) return <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center" }}>Đang tải...</div>;
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
+    <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
       <div style={{ width: 420, background: "#fff", borderRadius: 16, padding: 32, boxShadow: "0 20px 60px rgba(0,0,0,.3)" }}>
         <h2 style={{ marginTop: 0, fontFamily: "'Space Grotesk',sans-serif" }}>Không gian nhóm</h2>
         {workspaces.length > 0 && (
@@ -871,7 +884,7 @@ function RootGate() {
   }, [session, workspace]);
 
   if (session === undefined || (session && !workspace)) {
-    return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Đang tải...</div>;
+    return <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center" }}>Đang tải...</div>;
   }
   if (!session) return <AuthScreen onAuthed={setSession} />;
   return <WorkFlowProApp session={session} workspace={workspace} onSwitchWorkspace={setWorkspace} />;
@@ -881,9 +894,11 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
   const [currentUser, setCurrentUser] = useState(() => {
     const meta = session?.user?.user_metadata || {};
     const displayName = meta.name || session?.user?.email?.split("@")[0] || "Bạn";
-    return { id: session?.user?.id, name: displayName, avatar: displayName[0].toUpperCase(), status: "Online" };
+    const friendCode = session?.user?.id ? session.user.id.substring(0, 6).toUpperCase() : Math.random().toString(36).substring(2, 8).toUpperCase();
+    return { id: session?.user?.id, name: displayName, avatar: displayName[0].toUpperCase(), status: "Online", friendCode };
   });
   const [tasks, setTasks] = useState(seedTasks);
+  const [confirmConvert, setConfirmConvert] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [active, setActive] = useState("Bảng Điều Khiển");
   const [modalOpen, setModalOpen] = useState(false);
@@ -897,9 +912,10 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
   const [pomodoro, setPomodoro] = useState(null); // {taskId, secondsLeft}
   const [filter, setFilter] = useState("Hôm nay");
   const [quickAdd, setQuickAdd] = useState("");
-  const [showTeam, setShowTeam] = useState(false);
+  const [showTeam, setShowTeam] = useState(true);
   const [openProjectId, setOpenProjectId] = useState(null);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showFriends, setShowFriends] = useState(false);
   const [notifs, setNotifs] = useState([]);
 
   const [projectTab, setProjectTab] = useState("kanban");
@@ -923,12 +939,21 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
   const [reflectId, setReflectId] = useState(null);
   const [pomoStats, setPomoStats] = useState({ streak: 0, lastDate: null, totalSessions: 0, xp: 0, level: 1 });
   const [surprise, setSurprise] = useState(null);
-
-  // ==================== SUPABASE SYNC (theo không gian nhóm) ====================
+  // ==================== SUPABASE SYNC (tối ưu real-time) ====================
   const [syncReady, setSyncReady] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState("connecting"); // "connected" | "connecting" | "disconnected"
+  const [onlineUsers, setOnlineUsers] = useState([]);
+  const [stickyNote, setStickyNote] = useState("");
+  const [events, setEvents] = useState([]);
   const skipNextSave = useRef(false);
   const saveTimer = useRef(null);
+  const lastSaveTime = useRef(0);
+  const pendingSave = useRef(false);
+  const dataVersion = useRef(0);
+  const channelRef = useRef(null);
+  const presenceRef = useRef(null);
 
+  // --- 1. Tải dữ liệu ban đầu từ Supabase ---
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -946,49 +971,166 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
         if (d.habits) setHabits(d.habits);
         if (d.members) setMembers(d.members);
         if (d.friends) setFriends(d.friends);
-        if (d.focusLog) setFocusLog(d.focusLog);
         if (d.notifs) setNotifs(d.notifs);
+        if (d.stickyNote !== undefined) setStickyNote(d.stickyNote);
+        if (d.events) setEvents(d.events);
+        if (d.pomoStats) setPomoStats(d.pomoStats);
+        if (d.focusSettings) setFocusSettings(d.focusSettings);
+        if (d.settings) {
+          if (d.settings.soundOn !== undefined) setSoundOn(d.settings.soundOn);
+          if (d.settings.darkMode !== undefined) setDarkMode(d.settings.darkMode);
+          if (d.settings.showTeam !== undefined) setShowTeam(d.settings.showTeam);
+          if (d.settings.todaySortMode !== undefined) setTodaySortMode(d.settings.todaySortMode);
+          if (d.settings.projectTab !== undefined) setProjectTab(d.settings.projectTab);
+          if (d.settings.filter !== undefined) setFilter(d.settings.filter);
+        }
+        if (d._version) dataVersion.current = d._version;
       }
       setSyncReady(true);
     })();
     return () => { cancelled = true; };
   }, [workspace.id]);
 
+  // --- 2. Kênh Realtime: postgres_changes + Presence (trạng thái online) ---
   useEffect(() => {
     const channel = supabase
-      .channel(`workspace_${workspace.id}`)
+      .channel(`workspace_${workspace.id}`, {
+        config: { presence: { key: currentUser.id } }
+      })
       .on("postgres_changes", { event: "*", schema: "public", table: "workspace_state", filter: `workspace_id=eq.${workspace.id}` },
         (payload) => {
           const row = payload.new;
           if (!row || row.updated_by === CLIENT_ID) return;
           const d = row.data || {};
           skipNextSave.current = true;
+          if (d._version) dataVersion.current = Math.max(dataVersion.current, d._version);
           if (d.tasks) setTasks(d.tasks);
           if (d.projects) setProjects(d.projects);
           if (d.habits) setHabits(d.habits);
           if (d.members) setMembers(d.members);
-          if (d.friends) setFriends(d.friends);
           if (d.focusLog) setFocusLog(d.focusLog);
           if (d.notifs) setNotifs(d.notifs);
+          if (d.stickyNote !== undefined) setStickyNote(d.stickyNote);
+          if (d.events) setEvents(d.events);
+          if (d.pomoStats) setPomoStats(d.pomoStats);
+          if (d.focusSettings) setFocusSettings(d.focusSettings);
+          if (d.settings) {
+            if (d.settings.soundOn !== undefined) setSoundOn(d.settings.soundOn);
+            if (d.settings.darkMode !== undefined) setDarkMode(d.settings.darkMode);
+            if (d.settings.showTeam !== undefined) setShowTeam(d.settings.showTeam);
+            if (d.settings.todaySortMode !== undefined) setTodaySortMode(d.settings.todaySortMode);
+            if (d.settings.projectTab !== undefined) setProjectTab(d.settings.projectTab);
+            if (d.settings.filter !== undefined) setFilter(d.settings.filter);
+          }
         })
-      .subscribe();
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState();
+        const users = Object.values(state).flat().map(u => ({
+          id: u.user_id,
+          name: u.user_name,
+          online_at: u.online_at,
+          friendCode: u.friend_code
+        }));
+        setOnlineUsers(users);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          setConnectionStatus("connected");
+          await channel.track({
+            user_id: currentUser.id,
+            user_name: currentUser.name,
+            friend_code: currentUser.friendCode,
+            online_at: new Date().toISOString()
+          });
+        } else if (status === "CLOSED" || status === "CHANNEL_ERROR") {
+          setConnectionStatus("disconnected");
+        } else {
+          setConnectionStatus("connecting");
+        }
+      });
+    channelRef.current = channel;
+    presenceRef.current = channel;
     return () => { supabase.removeChannel(channel); };
-  }, [workspace.id]);
+  }, [workspace.id, currentUser.id, currentUser.name, currentUser.friendCode]);
 
+  // --- 3. Tự động reconnect khi tab focus lại (tối ưu mobile/tab switching) ---
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible" && channelRef.current) {
+        const state = channelRef.current.state;
+        if (state === "closed" || state === "errored") {
+          channelRef.current.subscribe();
+        }
+        if (presenceRef.current) {
+          presenceRef.current.track({
+            user_id: currentUser.id,
+            user_name: currentUser.name,
+            friend_code: currentUser.friendCode,
+            online_at: new Date().toISOString()
+          });
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [currentUser.id, currentUser.name, currentUser.friendCode]);
+
+  // --- 4. Debounced Save với adaptive throttle (nhanh hơn khi thay đổi ít, chậm hơn khi thay đổi liên tục) ---
   useEffect(() => {
     if (!syncReady) return;
     if (skipNextSave.current) { skipNextSave.current = false; return; }
+
+    const now = Date.now();
+    const timeSinceLastSave = now - lastSaveTime.current;
+    const delay = timeSinceLastSave < 500 ? 800 : 300; // adaptive: thay đổi liên tục → chờ lâu hơn, thay đổi đơn lẻ → lưu nhanh
+
     if (saveTimer.current) clearTimeout(saveTimer.current);
+    pendingSave.current = true;
+
     saveTimer.current = setTimeout(async () => {
+      dataVersion.current += 1;
+      const saveData = { 
+        tasks, projects, habits, members, friends, focusLog, notifs, stickyNote, events, 
+        pomoStats, focusSettings, settings: { soundOn, darkMode, showTeam, todaySortMode, projectTab, filter }, 
+        _version: dataVersion.current 
+      };
       await supabase.from("workspace_state").upsert({
         workspace_id: workspace.id,
-        data: { tasks, projects, habits, members, friends, focusLog, notifs },
+        data: saveData,
         updated_by: CLIENT_ID,
         updated_at: new Date().toISOString(),
       });
-    }, 700);
+      lastSaveTime.current = Date.now();
+      pendingSave.current = false;
+    }, delay);
+
     return () => clearTimeout(saveTimer.current);
-  }, [tasks, projects, habits, members, friends, focusLog, notifs, syncReady, workspace.id]);
+  }, [tasks, projects, habits, members, friends, focusLog, notifs, stickyNote, events, pomoStats, focusSettings, soundOn, darkMode, showTeam, todaySortMode, projectTab, filter, syncReady, workspace.id]);
+
+  // --- 5. Lưu dữ liệu trước khi đóng tab (beforeunload) ---
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (pendingSave.current && syncReady) {
+        dataVersion.current += 1;
+        const blob = new Blob([JSON.stringify({
+          workspace_id: workspace.id,
+          data: { 
+            tasks, projects, habits, members, friends, focusLog, notifs, stickyNote, events, 
+            pomoStats, focusSettings, settings: { soundOn, darkMode, showTeam, todaySortMode, projectTab, filter }, 
+            _version: dataVersion.current 
+          },
+          updated_by: CLIENT_ID,
+          updated_at: new Date().toISOString(),
+        })], { type: "application/json" });
+        navigator.sendBeacon && navigator.sendBeacon(
+          `${SUPABASE_URL}/rest/v1/workspace_state?on_conflict=workspace_id`,
+          blob
+        );
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [tasks, projects, habits, members, friends, focusLog, notifs, stickyNote, events, pomoStats, focusSettings, soundOn, darkMode, showTeam, todaySortMode, projectTab, filter, syncReady, workspace.id]);
 
   useEffect(() => {
     if (!focusTimer.running) return;
@@ -1396,10 +1538,30 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
     if (!name.trim()) return;
     playSound("add", soundOn);
     const grad = projectGrads[projects.length % projectGrads.length];
-    setProjects((ps) => [...ps, { id: "p" + Date.now(), name: name.trim(), grad, progress: 0, notes: "", desc: "", attachments: [], plans: [], members: [], type }]);
+    const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    setProjects((ps) => [...ps, { id: "p" + Date.now(), name: name.trim(), grad, progress: 0, notes: "", desc: "", attachments: [], plans: [], members: [currentUser.name], inviteCode, type }]);
     showToast("Đã thêm dự án mới");
   };
-  const removeProject = (id) => {
+  
+  const handleJoinProjectByCode = (code) => {
+    let found = false;
+    setProjects(ps => ps.map(p => {
+      const pCode = p.inviteCode || p.id.substring(0, 6).toUpperCase();
+      if (pCode === code) {
+        found = true;
+        if (!(p.members || []).includes(currentUser.name)) {
+          return { ...p, members: [...(p.members || []), currentUser.name] };
+        }
+      }
+      return p;
+    }));
+    if (found) {
+      showToast("Tham gia dự án thành công!");
+    } else {
+      showToast("Mã dự án không hợp lệ hoặc bạn đã là thành viên.");
+    }
+  };
+const removeProject = (id) => {
     playSound("remove", soundOn);
     setProjects((ps) => ps.filter((p) => p.id !== id));
     setOpenProjectId((op) => (op === id ? null : op));
@@ -1525,14 +1687,14 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
     let projName = presetProjectName;
 
     if (!projName) {
-      if ((active === "Dự Án Cá Nhân" || active === "Công Việc Nhóm") && openProjectId) {
+      if (active === "Dự Án" && openProjectId) {
         const cur = projects.find(p => p.id === openProjectId);
         if (cur) {
           projName = cur.name;
           if (!type) type = cur.type || "personal";
         }
       } else {
-        if (!type) type = active === "Công Việc Nhóm" ? "team" : "personal";
+        if (!type) type = "personal";
         projName = type === "team" ? "Team Project" : "Việc lẻ";
       }
     }
@@ -1599,7 +1761,7 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
 
   
   return (
-    <div className={darkMode ? "wf-dark wf-layout" : "wf-layout"} style={{ fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", background: "var(--wf-page-bg)", minHeight: "100vh", display: "flex", color: "var(--wf-text)", position: "relative", overflow: "hidden", transition: "background 0.35s ease, color 0.35s ease" }}>
+    <div className={darkMode ? "wf-dark wf-layout" : "wf-layout"} style={{ fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", background: "var(--wf-page-bg)", minHeight: "100dvh", display: "flex", color: "var(--wf-text)", position: "relative", overflow: "hidden", transition: "background 0.35s ease, color 0.35s ease" }}>
       <GlobalStyles />
       {/* Decorative background orbs */}
       <div style={{ position: "fixed", top: -140, right: -100, width: 480, height: 480, background: "radial-gradient(circle, rgba(192,38,211,0.12) 0%, rgba(236,72,153,0.06) 50%, transparent 70%)", borderRadius: "50%", pointerEvents: "none", zIndex: 0 }} />
@@ -1608,7 +1770,7 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
       <div style={{ position: "fixed", top: "40%", right: "15%", width: 260, height: 260, background: "radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 70%)", borderRadius: "50%", pointerEvents: "none", zIndex: 0 }} />
       {/* Sidebar */}
       <div className={`wf-overlay ${mobileOpen ? "open" : ""}`} onClick={() => setMobileOpen(false)} />
-      <aside style={{ width: 252, background: "var(--wf-sidebar-bg)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", borderRadius: 28, border: "1px solid var(--wf-sidebar-border)", boxShadow: "0 24px 64px rgba(109,40,217,0.14), 0 4px 18px rgba(0,0,0,0.06)", margin: "16px 0 16px 16px", padding: "22px 14px", flexShrink: 0, height: "calc(100vh - 32px)", overflowY: "auto", position: "relative", zIndex: 1 }} className={`wf-sidebar wf-scrollbar ${mobileOpen ? "open" : ""}`}>
+      <aside style={{ width: 252, background: "var(--wf-sidebar-bg)", backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)", borderRadius: 28, border: "1px solid var(--wf-sidebar-border)", boxShadow: "0 24px 64px rgba(109,40,217,0.14), 0 4px 18px rgba(0,0,0,0.06)", margin: "16px 0 16px 16px", padding: "22px 14px", flexShrink: 0, height: "calc(100dvh - 32px)", overflowY: "auto", position: "relative", zIndex: 1 }} className={`wf-sidebar wf-scrollbar ${mobileOpen ? "open" : ""}`}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 8px 14px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: 12, background: "linear-gradient(135deg,#7c3aed,#ec4899 55%,#f59e0b)", boxShadow: "0 8px 20px rgba(124,58,237,0.4)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>📅</div>
@@ -1631,15 +1793,16 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
         </div>
         <div style={{ height: 2, width: "100%", background: "linear-gradient(90deg, #7c3aed, #ec4899, #f59e0b, #7c3aed)", borderRadius: 4, margin: "0 0 16px", opacity: 0.7, backgroundSize: "200% 100%", animation: "wfGradientShift 4s ease infinite" }} />
         {Object.entries(navSections).map(([section, items]) => {
-          if (section === "Nhóm" && !showTeam) return null;
+          let currentItems = items;
+          if (currentItems.length === 0) return null;
           const isGroup = section !== "Tổng Quan";
           const isOpen = !collapsed[section];
-          const groupHasActive = items.some((i) => i.label === active);
+          const groupHasActive = currentItems.some((i) => i.label === active);
 
           if (!isGroup) {
             return (
               <div key={section} style={{ marginBottom: 6 }}>
-                {items.map(item => {
+                {currentItems.map(item => {
                   const Icon = item.icon; const isActive = active === item.label;
                   const isDashboard = item.label === "Bảng Điều Khiển";
                   return (
@@ -1666,7 +1829,7 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
 
               {isOpen && (
                 <div style={{ background: hexToRgba(groupColor[1], 0.04), borderRadius: 16, marginTop: 4, padding: "4px", border: `1px solid ${hexToRgba(groupColor[1], 0.1)}` }}>
-                  {items.map((item) => {
+                  {currentItems.map((item) => {
                     const Icon = item.icon; const isActive = active === item.label;
                     return (
                       <button key={item.label} className="wf-nav-btn" onClick={() => { playSound("click", soundOn); setActive(item.label); setOpenProjectId(null); setMobileOpen(false); }}
@@ -1725,7 +1888,7 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
       </aside>
 
       {/* Main */}
-      <main style={{ flex: 1, padding: "24px 28px", minWidth: 0, position: "relative", zIndex: 1, overflowY: "auto", height: "100vh" }} className="wf-main wf-scrollbar">
+      <main style={{ flex: 1, padding: "24px 28px", minWidth: 0, position: "relative", zIndex: 1, overflowY: "auto", height: "100dvh" }} className="wf-main wf-scrollbar">
         {/* Hamburger button for mobile - top of main content */}
         <div style={{ display: "none", alignItems: "center", gap: 10, marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid var(--wf-border-soft)" }} className="wf-hamburger">
           <button onClick={() => { setMobileOpen(true); playSound("click", soundOn); }}
@@ -1778,6 +1941,18 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
               <div style={{ width: 1, height: 20, background: "var(--wf-border)", margin: "0 4px" }} />
               <div style={{ position: "relative" }}>
                 <button
+                  onClick={() => setShowFriends(true)}
+                  title="Bạn bè & Online"
+                  className="wf-icon-btn"
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-text-secondary)", width: 32, height: 32, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, position: "relative" }}
+                >
+                  <Users size={17} />
+                  {onlineUsers.length > 0 && <div style={{ position: "absolute", top: 4, right: 4, width: 8, height: 8, background: "#10b981", borderRadius: "50%", border: "2px solid var(--wf-surface)" }} />}
+                </button>
+              </div>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: connectionStatus === "connected" ? "#10b981" : connectionStatus === "connecting" ? "#f59e0b" : "#ef4444", marginLeft: 4 }} title={connectionStatus === "connected" ? "Đã kết nối" : connectionStatus === "connecting" ? "Đang kết nối..." : "Mất kết nối"} />
+              <div style={{ position: "relative" }}>
+                <button
                   onClick={() => setShowNotifs(!showNotifs)}
                   title="Thông báo"
                   className="wf-icon-btn"
@@ -1822,15 +1997,15 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
         </div>
 
         {active === "Bảng Điều Khiển" && (
-          <DashboardView showTeam={showTeam} tasks={tasks} projects={projects} statCards={statCards} openAddModal={openAddModal} onOpenDetail={(t) => setDetailTaskId(t.id)} celebrate={celebrate}
+          <DashboardView showTeam={showTeam} currentUser={currentUser} tasks={tasks} projects={projects} statCards={statCards} openAddModal={openAddModal} onOpenDetail={(t) => setDetailTaskId(t.id)} celebrate={celebrate}
+            events={events} setEvents={setEvents} stickyNote={stickyNote} setStickyNote={setStickyNote}
             onToggleTask={toggleDone} habits={habits} onToggleHabitDay={toggleHabitDay} onGoHabits={() => setActive("Habit Tracker")}
             onGoProject={(pId) => { 
               const p = projects.find(x => x.id === pId);
               setOpenProjectId(pId);
-              if (p && p.type === "team") setActive("Công Việc Nhóm");
-              else setActive("Dự Án Cá Nhân");
+              setActive("Dự Án");
             }}
-            onGoTeamProject={() => setActive("Công Việc Nhóm")}
+            onGoTeamProject={() => setActive("Dự Án")}
             onQuickAdd={addQuickTaskWithDate} 
             onRescheduleTask={(taskId, newDate) => {
               setTasks(ts => ts.map(t => t.id === taskId ? { ...t, due: newDate } : t));
@@ -1907,37 +2082,64 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
           </>
         )}
 
-        {active === "Dự Án Cá Nhân" && !openProjectId && (
-          <PersonalProjectsGallery projects={projects.filter(p => p.type !== "team")} onOpen={(p) => { setOpenProjectId(p.id); setProjectTab("kanban"); }} onAdd={addProject} onRemove={removeProject} />
+        {active === "Dự Án" && !openProjectId && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+            <div>
+              <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 16px 0", color: "var(--wf-text-secondary)" }}>Dự Án Cá Nhân</h2>
+              <PersonalProjectsGallery projects={projects.filter(p => p.type !== "team")} onOpen={(p) => { setOpenProjectId(p.id); setProjectTab("kanban"); }} onAdd={addProject} onRemove={removeProject} onConvertProject={setConfirmConvert} />
+            </div>
+            {connectionStatus === "connected" ? (
+              <div>
+                <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 16px 0", color: "var(--wf-text-secondary)" }}>Dự Án Nhóm</h2>
+                <GroupProjectsGallery projects={projects.filter(p => p.type === 'team' && (p.members || []).includes(currentUser.name))} friends={friends} onOpen={(p) => { setOpenProjectId(p.id); setProjectTab("nhiemvu"); }} onAdd={(name) => addProject(name, "team")} onRemove={removeProject} onAddFriend={() => {}} onUpdateProject={(id, patch) => setProjects(ps => ps.map(p => p.id === id ? { ...p, ...patch } : p))} workspace={workspace} onJoinProjectByCode={handleJoinProjectByCode} onConvertProject={setConfirmConvert} />
+              </div>
+            ) : (
+              <div>
+                <h2 style={{ fontSize: 18, fontWeight: 800, margin: "0 0 16px 0", color: "var(--wf-text-secondary)" }}>Dự Án Nhóm</h2>
+                <div style={{ background: "var(--wf-surface)", borderRadius: 16, padding: 32, textAlign: "center", color: "var(--wf-text-muted)", boxShadow: "0 8px 20px rgba(26,32,53,0.06)" }}>
+                  <Users size={32} style={{ opacity: 0.3, marginBottom: 12 }} />
+                  <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Tính năng nhóm đang offline</div>
+                  <div style={{ fontSize: 13 }}>Vui lòng kiểm tra lại kết nối mạng để xem và tham gia các dự án chung.</div>
+                </div>
+              </div>
+            )}
+          </div>
         )}
-        {active === "Dự Án Cá Nhân" && openProjectId && (() => {
+        {active === "Dự Án" && openProjectId && (() => {
           const openProject = openProjectId === "standalone"
             ? { id: "standalone", name: "Việc lẻ", grad: "linear-gradient(135deg,#64748b,#475569)", progress: 0, desc: "Danh sách công việc lẻ, độc lập, không thuộc chuyên mục hay lộ trình dự án cụ thể nào.", attachments: [], notes: "" }
             : projects.find((p) => p.id === openProjectId);
           if (!openProject) return null;
-          return (
-            <ProjectWorkspace project={openProject} projects={projects} tasks={personalTasks.filter(t=>t.project===openProject.name || (openProject.id==="standalone" && (!t.project || t.project==="Việc lẻ")))} projectTab={projectTab} setProjectTab={setProjectTab} onBack={() => setOpenProjectId(null)} onCycle={cycleStatus} onSetStatus={setTaskStatus} onOpenDetail={(t) => setDetailTaskId(t.id)}
-              onRemoveTask={removeTask} onReorder={reorderTasks}
-              onUpdateDesc={updateProjectDesc} onAddAttachments={addProjectAttachments} onRemoveAttachment={removeProjectAttachment}
-              onUpdateProject={(patch) => { if (openProjectId !== "standalone") setProjects(ps => ps.map(p => p.id === openProjectId ? { ...p, ...patch } : p)); }}
-              onSyncLessonTask={syncLessonTask} openAddModal={openAddModal} />
-          );
-        })()}
 
-        {active === "Công Việc Nhóm" && !openProjectId && (
-          <GroupProjectsGallery projects={projects.filter(p => p.type === "team")} friends={friends} onOpen={(p) => { setOpenProjectId(p.id); setProjectTab("nhiemvu"); }} onAdd={(name) => addProject(name, "team")} onRemove={removeProject} onAddFriend={() => {}} onUpdateProject={(id, patch) => setProjects(ps => ps.map(p => p.id === id ? { ...p, ...patch } : p))} workspace={workspace} onJoinByCode={joinWorkspaceByCode} />
-        )}
-        {active === "Công Việc Nhóm" && openProjectId && (() => {
-          const openProject = projects.find((p) => p.id === openProjectId);
-          if (!openProject) return null;
-          return (
-            <GroupProjectWorkspace project={openProject} projects={projects} projectTab={projectTab} setProjectTab={setProjectTab} onBack={() => setOpenProjectId(null)}
-              tasks={tasks.filter(t => t.project === openProject.name)}
-              onUpdateProject={(patch) => { setProjects(ps => ps.map(p => p.id === openProjectId ? { ...p, ...patch } : p)); }}
-              onUpdateTask={(taskId, patch) => setTasks(ts => ts.map(t => t.id === taskId ? { ...t, ...patch } : t))}
-              onAddTask={(newTask) => setTasks(ts => [...ts, newTask])}
-            />
-          );
+          if (openProject.type === "team") {
+            if (connectionStatus !== "connected") {
+              return (
+                <div style={{ textAlign: "center", padding: 60, color: "var(--wf-text-muted)" }}>
+                  <Users size={40} style={{ opacity: 0.3, marginBottom: 16 }} />
+                  <h3 style={{ margin: "0 0 10px 0", color: "var(--wf-text)", fontSize: 18 }}>Mất kết nối mạng</h3>
+                  <p style={{ fontSize: 14, marginBottom: 20 }}>Dự án chung yêu cầu kết nối mạng để đồng bộ realtime. Vui lòng kết nối lại để tiếp tục.</p>
+                  <button onClick={() => setOpenProjectId(null)} className="wf-btn wf-btn-primary" style={{ ...primaryBtnStyle, padding: "10px 24px" }}>Quay lại</button>
+                </div>
+              );
+            }
+            return (
+              <GroupProjectWorkspace project={openProject} projects={projects} projectTab={projectTab} setProjectTab={setProjectTab} onBack={() => setOpenProjectId(null)}
+                tasks={tasks.filter(t => t.project === openProject.name)}
+                onUpdateProject={(patch) => { setProjects(ps => ps.map(p => p.id === openProjectId ? { ...p, ...patch } : p)); }}
+                onUpdateTask={(taskId, patch) => setTasks(ts => ts.map(t => t.id === taskId ? { ...t, ...patch } : t))}
+                onAddTask={(newTask) => setTasks(ts => [...ts, newTask])}
+                friends={friends}
+              />
+            );
+          } else {
+            return (
+              <ProjectWorkspace project={openProject} projects={projects} tasks={personalTasks.filter(t=>t.project===openProject.name || (openProject.id==="standalone" && (!t.project || t.project==="Việc lẻ")))} projectTab={projectTab} setProjectTab={setProjectTab} onBack={() => setOpenProjectId(null)} onCycle={cycleStatus} onSetStatus={setTaskStatus} onOpenDetail={(t) => setDetailTaskId(t.id)}
+                onRemoveTask={removeTask} onReorder={reorderTasks}
+                onUpdateDesc={updateProjectDesc} onAddAttachments={addProjectAttachments} onRemoveAttachment={removeProjectAttachment}
+                onUpdateProject={(patch) => { if (openProjectId !== "standalone") setProjects(ps => ps.map(p => p.id === openProjectId ? { ...p, ...patch } : p)); }}
+                onSyncLessonTask={syncLessonTask} openAddModal={openAddModal} />
+            );
+          }
         })()}
 
         {active === "Habit Tracker" && <HabitTrackerView habits={habits} onAddHabit={addHabit} onRemoveHabit={removeHabit} onToggleHabitDay={toggleHabitDay} onReorder={reorderHabits} />}
@@ -1955,10 +2157,6 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
         {active === "Lịch" && <CalendarView tasks={tasks} onOpenDetail={(t) => setDetailTaskId(t.id)} />}
 
         {active === "Hướng Dẫn" && <GuideView onNavigate={(target) => setActive(target)} />}
-
-        {active === "Hồ Sơ & Bạn Bè" && <SocialView currentUser={currentUser} />}
-        
-        {active === "Trò Chuyện" && <ChatView currentUser={currentUser} />}
 
         {active === "Báo Cáo" && <ReportsView tasks={tasks} focusLog={focusLog} />}
 
@@ -1984,6 +2182,121 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
             showToast(`Đã chuyển việc sang: ${newProj}`);
           }}
           onUpdateWorkTime={updateTaskWorkTime} />
+      )}
+
+      {/* Friends & Online modal */}
+      {showFriends && (
+        <div onClick={() => setShowFriends(false)} style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: 420, background: "var(--wf-surface)", borderRadius: 24, boxShadow: "0 24px 80px rgba(0,0,0,0.2)", overflow: "hidden", display: "flex", flexDirection: "column", maxHeight: "80vh" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid var(--wf-border)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--wf-page-bg)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ fontSize: 18, fontWeight: 800, color: "var(--wf-text)" }}>Bạn Bè & Online</div>
+                <div style={{ fontSize: 11, fontWeight: 700, background: "#d1fae5", color: "#059669", padding: "3px 10px", borderRadius: 20 }}>{onlineUsers.length} online</div>
+              </div>
+              <button onClick={() => setShowFriends(false)} style={{ background: "none", border: "none", color: "var(--wf-text-muted)", cursor: "pointer" }}><X size={20} /></button>
+            </div>
+
+            {/* Online users from Presence */}
+            {onlineUsers.length > 0 && (
+              <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--wf-border-soft)" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#059669", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>Đang hoạt động</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {onlineUsers.map(u => (
+                    <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "#ecfdf5", padding: "6px 12px", borderRadius: 20, border: "1px solid #d1fae5" }}>
+                      <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981", animation: "pulse 2s infinite" }} />
+                      <span style={{ fontSize: 12.5, fontWeight: 700, color: "#065f46" }}>{u.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div style={{ padding: "16px 24px", overflowY: "auto", flex: 1 }} className="wf-scrollbar">
+              <div style={{ marginBottom: 16, fontSize: 13, color: "var(--wf-text-secondary)" }}>
+                Mã kết bạn của bạn: <strong style={{ color: "#6366f1", letterSpacing: 1, userSelect: "all" }}>{currentUser.friendCode}</strong>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                <input type="text" id="friendNameInput" placeholder="Nhập mã kết bạn (vd: A1B2C3)..." className="wf-input" style={{ flex: 1, border: "1px solid var(--wf-border)", borderRadius: 10, padding: "8px 12px", outline: "none", fontSize: 13, textTransform: "uppercase" }} onKeyDown={(e) => {
+                  if (e.key === 'Enter') document.getElementById('addFriendBtn').click();
+                }} />
+                <button id="addFriendBtn" onClick={() => {
+                  const val = document.getElementById('friendNameInput').value.trim().toUpperCase();
+                  if (!val) return;
+                  if (val === currentUser.friendCode) {
+                    showToast("Bạn không thể tự kết bạn với chính mình!");
+                    return;
+                  }
+                  if (!friends.find(f => f.friendCode === val)) {
+                    const onlineMatch = onlineUsers.find(u => u.friendCode === val);
+                    const friendName = onlineMatch ? onlineMatch.name : `Người dùng ${val}`;
+                    setFriends(prev => [...prev, { id: 'f'+Date.now(), name: friendName, friendCode: val, avatarColor: '#8b5cf6' }]);
+                    document.getElementById('friendNameInput').value = '';
+                    playSound("add", soundOn);
+                  } else {
+                    showToast("Bạn này đã có trong danh sách!");
+                  }
+                }} style={{ background: "linear-gradient(135deg, #6366f1, #a855f7)", color: "#fff", border: "none", padding: "0 16px", borderRadius: 10, fontWeight: 700, cursor: "pointer", fontSize: 13 }}>Thêm</button>
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--wf-text-muted)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>Danh sách bạn bè</div>
+              {friends.length === 0 ? (
+                <div style={{ textAlign: "center", color: "var(--wf-text-muted)", fontSize: 13, padding: "30px 0" }}>Chưa có bạn bè nào.</div>
+              ) : (
+                friends.map(f => {
+                  const onlineMatch = onlineUsers.find(u => (f.friendCode && u.friendCode === f.friendCode) || (!f.friendCode && u.name === f.name));
+                  const isOnline = !!onlineMatch;
+                  const dispName = onlineMatch ? onlineMatch.name : f.name;
+                  return (
+                    <div key={f.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "var(--wf-page-bg)", borderRadius: 16, marginBottom: 8, transition: "all 0.2s" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ position: "relative" }}>
+                          <div style={{ width: 40, height: 40, borderRadius: "50%", background: f.avatarColor || "#6366f1", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 800 }}>{(f.avatar || dispName[0])}</div>
+                          <div style={{ position: "absolute", bottom: 0, right: 0, width: 12, height: 12, borderRadius: "50%", background: isOnline ? "#10b981" : "#94a3b8", border: "2.5px solid var(--wf-page-bg)", transition: "background 0.3s" }} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--wf-text)" }}>{dispName}</div>
+                          <div style={{ fontSize: 11, color: isOnline ? "#10b981" : "#94a3b8", fontWeight: 600 }}>{isOnline ? "Online" : "Offline"}</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <div style={{ padding: "12px 24px", borderTop: "1px solid var(--wf-border-soft)", background: "var(--wf-page-bg)", display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 6, height: 6, borderRadius: "50%", background: connectionStatus === "connected" ? "#10b981" : connectionStatus === "connecting" ? "#f59e0b" : "#ef4444" }} />
+              <span style={{ fontSize: 11, color: "var(--wf-text-muted)", fontWeight: 600 }}>{connectionStatus === "connected" ? "Đã kết nối real-time" : connectionStatus === "connecting" ? "Đang kết nối..." : "Mất kết nối"}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Convert Project Modal */}
+      {confirmConvert && (
+        <div className="wf-modal-overlay" style={{ position: "fixed", inset: 0, background: "rgba(20,20,30,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 110 }} onClick={() => setConfirmConvert(null)}>
+          <div className="wf-modal" onClick={(e) => e.stopPropagation()} style={{ background: "var(--wf-surface)", borderRadius: 18, padding: 24, width: 400 }}>
+            <h3 style={{ margin: "0 0 12px 0", fontSize: 18, fontWeight: 800 }}>Xác nhận chuyển đổi</h3>
+            <p style={{ color: "var(--wf-text-secondary)", fontSize: 13.5, lineHeight: 1.5, marginBottom: 20 }}>
+              Bạn có chắc chắn muốn chuyển dự án <strong>{confirmConvert.name}</strong> thành <strong>{confirmConvert.type === "team" ? "Dự Án Cá Nhân" : "Dự Án Nhóm"}</strong> không?<br /><br />
+              {confirmConvert.type === "team" ? "Toàn bộ công việc và lộ trình sẽ được giữ lại, nhưng các thành viên khác sẽ không còn quyền truy cập." : "Dự án sẽ chuyển thành dạng chia sẻ nhóm. Toàn bộ công việc và lộ trình sẽ được giữ lại."}
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button onClick={() => setConfirmConvert(null)} style={{ ...secondaryBtnStyle, padding: "8px 16px" }}>Hủy</button>
+              <button onClick={() => {
+                const newType = confirmConvert.type === "team" ? "personal" : "team";
+                const patch = { type: newType };
+                if (newType === "team" && (!confirmConvert.members || confirmConvert.members.length === 0)) {
+                  patch.members = [currentUser.name];
+                }
+                setProjects(ps => ps.map(p => p.id === confirmConvert.id ? { ...p, ...patch } : p));
+                if (openProjectId === confirmConvert.id) setOpenProjectId(null);
+                setConfirmConvert(null);
+              }} style={{ ...primaryBtnStyle, background: "#10b981", padding: "8px 16px" }}>
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Add task modal */}
@@ -2100,7 +2413,7 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
                   <>
                     <label style={labelStyle}>Dự án Nhóm</label>
                     <select value={form.project || ""} onChange={(e) => setForm({ ...form, project: e.target.value, assignees: [] })} style={inputStyle}>
-                      {projects.filter(p => p.type === "team").map((p) => (<option key={p.id} value={p.name}>{p.name}</option>))}
+                      {projects.filter(p => p.type === 'team' && (p.members || []).includes(currentUser.name)).map((p) => (<option key={p.id} value={p.name}>{p.name}</option>))}
                     </select>
 
                     <div style={{ display: "flex", gap: 10 }}>
@@ -2182,7 +2495,7 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
 
 // ================= Views =================
 
-function DashboardView({ showTeam, tasks, projects, statCards, openAddModal, onOpenDetail, celebrate, onToggleTask, habits, onToggleHabitDay, onGoHabits, quickAdd, setQuickAdd, submitQuickAdd, onGoProject, onGoTeamProject, onQuickAdd, onRescheduleTask, onUpdateWorkTime, onReorderTasks, todaySortMode, setTodaySortMode, onPomodoro }) {
+function DashboardView({ showTeam, currentUser, tasks, projects, statCards, openAddModal, onOpenDetail, celebrate, onToggleTask, habits, onToggleHabitDay, onGoHabits, quickAdd, setQuickAdd, submitQuickAdd, onGoProject, onGoTeamProject, onQuickAdd, onRescheduleTask, onUpdateWorkTime, onReorderTasks, todaySortMode, setTodaySortMode, onPomodoro, events, setEvents, stickyNote, setStickyNote }) {
   const [localQuickAdd, setLocalQuickAdd] = useState("");
   const [weekQuickAdd, setWeekQuickAdd] = useState({});
   const [draggingTask, setDraggingTask] = useState(null);
@@ -2411,7 +2724,7 @@ function DashboardView({ showTeam, tasks, projects, statCards, openAddModal, onO
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "linear-gradient(90deg,#10b981,#06b6d4)" }} />
           <h3 style={{ margin: "0 0 14px", fontSize: 14, fontWeight: 800, color: "#10b981" }}>📂 DỰ ÁN</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--wf-text-muted)", marginTop: 4, marginBottom: -2, textTransform: "uppercase" }}>Dự án Cá nhân</div>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--wf-text-muted)", marginTop: 4, marginBottom: -2, textTransform: "uppercase" }}>Dự Án</div>
             {projects.filter(p => p.type !== "team").map(p => {
               const pTasks = tasks.filter(t => t.project === p.name);
               const doneCount = pTasks.filter(t => t.status === "done").length;
@@ -2435,10 +2748,10 @@ function DashboardView({ showTeam, tasks, projects, statCards, openAddModal, onO
               );
             })}
 
-            {showTeam && projects.filter(p => p.type === "team").length > 0 && (
+            {showTeam && projects.filter(p => p.type === 'team' && (p.members || []).includes(currentUser.name)).length > 0 && (
               <>
                 <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--wf-text-muted)", marginTop: 12, marginBottom: -2, textTransform: "uppercase" }}>Dự án Nhóm</div>
-                {projects.filter(p => p.type === "team").map(p => {
+                {projects.filter(p => p.type === 'team' && (p.members || []).includes(currentUser.name)).map(p => {
                   const pTasks = tasks.filter(t => t.project === p.name);
                   const doneCount = pTasks.filter(t => t.status === "done").length;
                   const pct = pTasks.length > 0 ? Math.round((doneCount / pTasks.length) * 100) : 0;
@@ -2864,7 +3177,7 @@ function KanbanView({ tasks, onCycle, onSetStatus, onRemove, onOpenDetail }) {
   );
 }
 
-function PersonalProjectsGallery({ projects, onOpen, onAdd, onRemove }) {
+function PersonalProjectsGallery({ projects, onOpen, onAdd, onRemove, onConvertProject }) {
   const [draft, setDraft] = useState("");
   return (
     <div>
@@ -2876,7 +3189,10 @@ function PersonalProjectsGallery({ projects, onOpen, onAdd, onRemove }) {
       <div className="wf-grid-3">
         {projects.map((p) => (
           <div key={p.id} className="wf-card-pop" onClick={() => onOpen(p)} style={{ position: "relative", background: p.grad, borderRadius: 18, padding: 20, color: "#fff", cursor: "pointer", minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "space-between", boxShadow: "0 10px 26px rgba(99,102,241,0.22)" }}>
-            <button onClick={(e) => { e.stopPropagation(); onRemove(p.id); }} title="Xoá dự án" style={{ position: "absolute", top: 10, right: 10, background: "rgba(255,255,255,0.22)", border: "none", borderRadius: 8, cursor: "pointer", color: "#fff", padding: 5 }}><Trash2 size={13} /></button>
+            <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 6 }}>
+              <button onClick={(e) => { e.stopPropagation(); onConvertProject && onConvertProject(p); }} title="Chuyển thành Nhóm" style={{ background: "rgba(255,255,255,0.22)", border: "none", borderRadius: 8, cursor: "pointer", color: "#fff", padding: 5 }}><Users size={13} /></button>
+              <button onClick={(e) => { e.stopPropagation(); onRemove(p.id); }} title="Xoá dự án" style={{ background: "rgba(255,255,255,0.22)", border: "none", borderRadius: 8, cursor: "pointer", color: "#fff", padding: 5 }}><Trash2 size={13} /></button>
+            </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}><FolderLock size={16} /></div>
               <Lock size={14} opacity={0.8} />
@@ -3262,7 +3578,7 @@ function ProjectWorkspace({ project, projects, tasks, projectTab, setProjectTab,
   return (
     <div>
       <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "#6366f1", fontSize: 12.5, fontWeight: 600, cursor: "pointer", marginBottom: 12 }}>
-        <ArrowLeft size={14} /> Quay lại Dự Án Cá Nhân
+        <ArrowLeft size={14} /> Quay lại Dự Án
       </button>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
         <div style={{ width: 40, height: 40, borderRadius: 12, background: project.grad }} />
@@ -3346,7 +3662,7 @@ function ProjectWorkspace({ project, projects, tasks, projectTab, setProjectTab,
   );
 }
 
-function GroupProjectsGallery({ projects, friends, onOpen, onAdd, onRemove, onAddFriend, onUpdateProject, workspace, onJoinByCode }) {
+function GroupProjectsGallery({ projects, friends, onOpen, onAdd, onRemove, onAddFriend, onUpdateProject, workspace, onJoinProjectByCode, onConvertProject }) {
   const [draft, setDraft] = useState("");
   const [settingsProject, setSettingsProject] = useState(null);
   const [newCat, setNewCat] = useState("");
@@ -3366,80 +3682,76 @@ function GroupProjectsGallery({ projects, friends, onOpen, onAdd, onRemove, onAd
 
   return (
     <div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 20, marginBottom: 20 }}>
-        <div style={{ flex: "2 1 400px" }}>
-          <div style={{ background: "var(--wf-surface)", borderRadius: 16, padding: 12, marginBottom: 16, display: "flex", gap: 8, alignItems: "center", boxShadow: "0 8px 20px rgba(26,32,53,0.06)" }}>
-            <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { onAdd(draft); setDraft(""); } }}
-              placeholder="Tên nhiệm vụ nhóm mới..." className="wf-input" style={{ flex: 1, border: "1px solid var(--wf-border)", borderRadius: 10, padding: "9px 12px", fontSize: 13, outline: "none" }} />
-            <button className="wf-btn wf-btn-primary" onClick={() => { onAdd(draft); setDraft(""); }} style={{ ...primaryBtnStyle, padding: "9px 16px", display: "flex", alignItems: "center", gap: 5 }}><Plus size={14} /> Thêm nhiệm vụ</button>
-          </div>
-          <div className="wf-grid-2">
-            {projects.map((p) => (
-              <div key={p.id} className="wf-card-pop" onClick={() => onOpen(p)} style={{ position: "relative", background: p.grad, borderRadius: 18, padding: 20, color: "#fff", cursor: "pointer", minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "space-between", boxShadow: "0 10px 26px rgba(99,102,241,0.22)" }}>
-                <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 6 }}>
-                  <button onClick={(e) => { e.stopPropagation(); setSettingsProject(p.id); }} title="Cài đặt dự án" style={{ background: "rgba(255,255,255,0.22)", border: "none", borderRadius: 8, cursor: "pointer", color: "#fff", padding: 5 }}><Settings size={13} /></button>
-                  <button onClick={(e) => { e.stopPropagation(); onRemove(p.id); }} title="Xoá dự án" style={{ background: "rgba(255,255,255,0.22)", border: "none", borderRadius: 8, cursor: "pointer", color: "#fff", padding: 5 }}><Trash2 size={13} /></button>
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between" }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}><FolderKanban size={16} /></div>
-                  <Users size={14} opacity={0.8} />
-                </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{p.name}</div>
-                  <div style={{ fontSize: 11, opacity: 0.9 }}>{(p.members || []).length} thành viên</div>
-                </div>
-              </div>
-            ))}
-          </div>
+      <div style={{ display: "flex", gap: 16, marginBottom: 16, flexWrap: "wrap" }}>
+        <div style={{ background: "var(--wf-surface)", borderRadius: 16, padding: 12, display: "flex", gap: 8, alignItems: "center", boxShadow: "0 8px 20px rgba(26,32,53,0.06)", flex: 1, minWidth: 200 }}>
+          <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { onAdd(draft); setDraft(""); } }}
+            placeholder="Tên dự án nhóm mới..." className="wf-input" style={{ flex: 1, border: "1px solid var(--wf-border)", borderRadius: 10, padding: "9px 12px", fontSize: 13, outline: "none" }} />
+          <button className="wf-btn wf-btn-primary" onClick={() => { onAdd(draft); setDraft(""); }} style={{ ...primaryBtnStyle, padding: "9px 16px", display: "flex", alignItems: "center", gap: 5 }}><Plus size={14} /> Tạo mới</button>
         </div>
-        
-        <div style={{ flex: "1 1 250px", background: "var(--wf-surface)", borderRadius: 18, padding: 20, boxShadow: "0 8px 20px rgba(26,32,53,0.06)", alignSelf: "flex-start" }}>
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}><Users size={18} color="#6366f1"/> Không gian nhóm</div>
-          {workspace && (
-            <div style={{ background: "var(--wf-bg)", border: "1px solid var(--wf-border)", borderRadius: 12, padding: 12, marginBottom: 10 }}>
-              <div style={{ fontSize: 12, color: "var(--wf-text-faint)", marginBottom: 6 }}>{workspace.name}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <div style={{ flex: 1, fontFamily: "monospace", fontWeight: 700, fontSize: 15, letterSpacing: 1 }}>{workspace.invite_code}</div>
-                <button onClick={copyInviteCode} title="Sao chép mã mời" style={{ background: "var(--wf-hover-soft)", border: "none", borderRadius: 8, cursor: "pointer", padding: 6, display: "flex" }}>
-                  {copied ? <Check size={14} color="#10b981" /> : <Paperclip size={14} />}
-                </button>
-              </div>
-              <div style={{ fontSize: 11, color: "var(--wf-text-faint)", marginTop: 6 }}>Chia sẻ mã này để mời người khác vào nhóm</div>
+        <div style={{ background: "var(--wf-surface)", borderRadius: 16, padding: 12, display: "flex", gap: 8, alignItems: "center", boxShadow: "0 8px 20px rgba(26,32,53,0.06)", flex: 1, minWidth: 200 }}>
+          <input value={joinCodeDraft} onChange={(e) => setJoinCodeDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && joinCodeDraft.trim()) { onJoinProjectByCode(joinCodeDraft); setJoinCodeDraft(""); } }}
+            placeholder="Nhập mã tham gia nhóm khác..." className="wf-input" style={{ flex: 1, border: "1px solid var(--wf-border)", borderRadius: 10, padding: "9px 12px", fontSize: 13, outline: "none" }} />
+          <button onClick={() => { if (joinCodeDraft.trim()) { onJoinProjectByCode(joinCodeDraft); setJoinCodeDraft(""); } }} style={{ ...primaryBtnStyle, padding: "9px 16px", display: "flex", alignItems: "center", gap: 5 }}><Link2 size={14} /> Tham gia</button>
+        </div>
+      </div>
+      
+      <div className="wf-grid-3">
+        {projects.map((p) => (
+          <div key={p.id} className="wf-card-pop" onClick={() => onOpen(p)} style={{ position: "relative", background: p.grad, borderRadius: 18, padding: 20, color: "#fff", cursor: "pointer", minHeight: 140, display: "flex", flexDirection: "column", justifyContent: "space-between", boxShadow: "0 10px 26px rgba(99,102,241,0.22)" }}>
+            <div style={{ position: "absolute", top: 10, right: 10, display: "flex", gap: 6 }}>
+              <button onClick={(e) => { e.stopPropagation(); setSettingsProject(p.id); }} title="Cài đặt dự án" style={{ background: "rgba(255,255,255,0.22)", border: "none", borderRadius: 8, cursor: "pointer", color: "#fff", padding: 5 }}><Settings size={13} /></button>
+              <button onClick={(e) => { e.stopPropagation(); onConvertProject && onConvertProject(p); }} title="Chuyển thành Cá nhân" style={{ background: "rgba(255,255,255,0.22)", border: "none", borderRadius: 8, cursor: "pointer", color: "#fff", padding: 5 }}><User size={13} /></button>
+              <button onClick={(e) => { e.stopPropagation(); onRemove(p.id); }} title="Xoá dự án" style={{ background: "rgba(255,255,255,0.22)", border: "none", borderRadius: 8, cursor: "pointer", color: "#fff", padding: 5 }}><Trash2 size={13} /></button>
             </div>
-          )}
-          <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
-            <input value={joinCodeDraft} onChange={(e) => setJoinCodeDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && joinCodeDraft.trim()) { onJoinByCode(joinCodeDraft); setJoinCodeDraft(""); } }}
-              placeholder="Nhập mã để tham gia nhóm khác" className="wf-input"
-              style={{ flex: 1, border: "1px solid var(--wf-border)", borderRadius: 10, padding: "8px 10px", fontSize: 12, outline: "none" }} />
-            <button onClick={() => { if (joinCodeDraft.trim()) { onJoinByCode(joinCodeDraft); setJoinCodeDraft(""); } }}
-              style={{ ...primaryBtnStyle, padding: "8px 12px", fontSize: 12 }}>Tham gia</button>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(255,255,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center" }}><FolderKanban size={16} /></div>
+              <Users size={14} opacity={0.8} />
+            </div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{p.name}</div>
+              <div style={{ fontSize: 11, opacity: 0.9 }}>{(p.members || []).length} thành viên</div>
+            </div>
           </div>
-          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}><Users size={18} color="#6366f1"/> Danh sách Bạn bè</div>
-          <button className="wf-btn wf-btn-primary" onClick={onAddFriend} style={{ ...primaryBtnStyle, width: "100%", padding: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 16 }}><Link2 size={15}/> Lấy link mời kết bạn</button>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            {friends.map(f => (
-              <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: 8, borderRadius: 12, border: "1px solid var(--wf-border)", background: "var(--wf-bg)" }}>
-                <div style={{ fontSize: 24 }}>{f.avatar}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{f.name}</div>
-                  <div style={{ fontSize: 11, color: "var(--wf-text-faint)", display: "flex", alignItems: "center", gap: 4 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: 3, background: f.status === "online" ? "#10b981" : f.status === "busy" ? "#ef4444" : "#94a3b8" }}/>
-                    {f.status}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        ))}
       </div>
 
       {sp && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={() => setSettingsProject(null)}>
           <div style={{ background: "var(--wf-surface)", width: 400, borderRadius: 20, padding: 24, boxShadow: "0 20px 40px rgba(0,0,0,0.2)" }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Cài đặt Dự án: {sp.name}</div>
+            <div style={{ background: "var(--wf-bg)", border: "1px solid var(--wf-border)", borderRadius: 12, padding: 12, marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontSize: 11, color: "var(--wf-text-faint)", marginBottom: 4 }}>Mã tham gia dự án</div>
+                <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 15, letterSpacing: 1 }}>{sp.inviteCode || sp.id.substring(0, 6).toUpperCase()}</div>
+              </div>
+              <button onClick={() => { navigator.clipboard?.writeText(sp.inviteCode || sp.id.substring(0, 6).toUpperCase()); }} style={{ background: "var(--wf-hover-soft)", border: "none", borderRadius: 8, cursor: "pointer", padding: 8 }}><Paperclip size={14} /></button>
+            </div>
             
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: "var(--wf-text-secondary)" }}>Chuyên mục công việc</div>
+            
+            <div style={{ fontSize: 13, fontWeight: 600, marginTop: 16, marginBottom: 8, color: "var(--wf-text-secondary)" }}>Thành viên dự án</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+              {(sp.members || ["Bạn"]).map(m => (
+                <div key={m} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--wf-hover-soft)", padding: "5px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
+                  <Users size={12} /> {m}
+                  {m !== "Bạn" && (
+                    <button onClick={() => onUpdateProject && onUpdateProject(sp.id, { members: (sp.members || ["Bạn"]).filter(x => x !== m) })} style={{ background: "none", border: "none", color: "var(--wf-text-muted)", cursor: "pointer", display: "flex", alignItems: "center" }}><X size={12} /></button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 8, marginBottom: 24 }}>
+              <input id="inviteInput" placeholder="Nhập tên người dùng..." className="wf-input" style={{ flex: 1, border: "1px solid var(--wf-border)", borderRadius: 10, padding: "7px 12px", fontSize: 13, outline: "none" }} onKeyDown={(e) => { if(e.key === "Enter") document.getElementById("inviteBtn").click(); }} />
+              <button id="inviteBtn" onClick={() => { 
+                const inp = document.getElementById("inviteInput"); 
+                const val = inp.value.trim();
+                if(val && !(sp.members || []).includes(val)) { 
+                  onUpdateProject && onUpdateProject(sp.id, { members: [...(sp.members || ["Bạn"]), val] }); 
+                  inp.value = ""; 
+                } 
+              }} style={{ ...secondaryBtnStyle, padding: "0 14px", fontSize: 13 }}>Mời</button>
+            </div>
+<div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: "var(--wf-text-secondary)" }}>Chuyên mục công việc</div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
               {spCategories.map(c => (
                 <div key={c} style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--wf-hover-soft)", padding: "5px 10px", borderRadius: 12, fontSize: 12, fontWeight: 600 }}>
@@ -3628,7 +3940,7 @@ function SharedCalendarView({ project, onUpdateProject }) {
   );
 }
 
-function GroupProjectWorkspace({ project, projects, projectTab, setProjectTab, onBack, tasks, onUpdateProject, onUpdateTask, onAddTask }) {
+function GroupProjectWorkspace({ project, projects, projectTab, setProjectTab, onBack, tasks, onUpdateProject, onUpdateTask, onAddTask, friends }) {
   const [showMembersList, setShowMembersList] = useState(false);
   const [editingCell, setEditingCell] = useState({ id: null, field: null, value: "" });
   const [descDraft, setDescDraft] = useState(project.desc || "");
@@ -3720,6 +4032,28 @@ function GroupProjectWorkspace({ project, projects, projectTab, setProjectTab, o
                   </div>
                 ))}
               </div>
+
+              {friends && friends.filter(f => !project.members.includes(f.name)).length > 0 && (
+                <>
+                  <div style={{ fontSize: 12, fontWeight: 700, margin: "16px 0 12px 0", color: "var(--wf-text-faint)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>Mời bạn bè</span>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {friends.filter(f => !project.members.includes(f.name)).map(f => (
+                      <div key={f.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "6px 8px", background: "var(--wf-bg)", borderRadius: 8, cursor: "pointer" }}
+                           onClick={(e) => { e.stopPropagation(); onUpdateProject({ members: [...project.members, f.name] }); }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ width: 26, height: 26, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#a855f7)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 700 }}>
+                            {getInitials(f.name)}
+                          </div>
+                          <div style={{ fontSize: 12.5, fontWeight: 600 }}>{f.name}</div>
+                        </div>
+                        <Plus size={14} color="var(--wf-text-muted)" />
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -4154,7 +4488,7 @@ function HabitTrackerView({ habits, onAddHabit, onRemoveHabit, onToggleHabitDay,
             const d = new Date(todayStr); d.setDate(d.getDate() - i);
             const dStr = d.toISOString().slice(0,10);
             if (i < 7) heatmapData[dStr] = h.checked[todayIdx - i] ? 1 : 0;
-            else heatmapData[dStr] = Math.random() > 0.6 ? 1 : 0; // mocked historical data for visual
+            else heatmapData[dStr] = 0;
           }
 
           return (
@@ -5108,7 +5442,7 @@ function LoginView({ onLogin, darkMode, setDarkMode, soundOn, setSoundOn, playSo
   };
 
   return (
-    <div className={darkMode ? "wf-dark wf-layout" : "wf-layout"} style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: "var(--wf-page-bg)", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--wf-text)", position: "relative", overflow: "hidden" }}>
+    <div className={darkMode ? "wf-dark wf-layout" : "wf-layout"} style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", background: "var(--wf-page-bg)", minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--wf-text)", position: "relative", overflow: "hidden" }}>
       <div style={{ position: "fixed", top: -140, right: -100, width: 480, height: 480, background: "radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
       <div style={{ position: "fixed", bottom: -120, left: -100, width: 480, height: 480, background: "radial-gradient(circle, rgba(168,85,247,0.15) 0%, transparent 70%)", borderRadius: "50%", pointerEvents: "none" }} />
       
