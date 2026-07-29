@@ -1396,7 +1396,7 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
     if (!name.trim()) return;
     playSound("add", soundOn);
     const grad = projectGrads[projects.length % projectGrads.length];
-    setProjects((ps) => [...ps, { id: "p" + Date.now(), name: name.trim(), grad, progress: 0, notes: "", desc: "", attachments: [], plans: [], type }]);
+    setProjects((ps) => [...ps, { id: "p" + Date.now(), name: name.trim(), grad, progress: 0, notes: "", desc: "", attachments: [], plans: [], members: [], type }]);
     showToast("Đã thêm dự án mới");
   };
   const removeProject = (id) => {
@@ -3386,7 +3386,7 @@ function GroupProjectsGallery({ projects, friends, onOpen, onAdd, onRemove, onAd
                 </div>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{p.name}</div>
-                  <div style={{ fontSize: 11, opacity: 0.9 }}>{p.members.length} thành viên</div>
+                  <div style={{ fontSize: 11, opacity: 0.9 }}>{(p.members || []).length} thành viên</div>
                 </div>
               </div>
             ))}
