@@ -890,6 +890,20 @@ function RootGate() {
   return <WorkFlowProApp session={session} workspace={workspace} onSwitchWorkspace={setWorkspace} />;
 }
 
+const mergeBy = (local, remote, key = "id") => {
+  if (!local) return remote || [];
+  if (!remote) return local || [];
+  const map = new Map(remote.map(i => [i[key], i]));
+  local.forEach(i => map.set(i[key], i));
+  return Array.from(map.values());
+};
+
+const mergeLog = (local, remote) => {
+  const map = new Map((remote || []).map(i => [i.date, i]));
+  (local || []).forEach(i => map.set(i.date, i));
+  return Array.from(map.values()).sort((a,b) => b.date - a.date);
+};
+
 export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }) {
   const [currentUser, setCurrentUser] = useState(() => {
     const meta = session?.user?.user_metadata || {};
@@ -991,40 +1005,77 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
     return () => { cancelled = true; };
   }, [workspace.id]);
 
-  // --- 2. Kênh Realtime: postgres_changes + Presence (trạng thái online) ---
+  // --- 2. Kênh Realtime: postgres_changes ---
   useEffect(() => {
     const channel = supabase
-      .channel(`workspace_${workspace.id}`, {
-        config: { presence: { key: currentUser.id } }
-      })
+      .channel(`workspace_${workspace.id}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "workspace_state", filter: `workspace_id=eq.${workspace.id}` },
         (payload) => {
           const row = payload.new;
           if (!row || row.updated_by === CLIENT_ID) return;
           const d = row.data || {};
-          skipNextSave.current = true;
-          if (d._version) dataVersion.current = Math.max(dataVersion.current, d._version);
-          if (d.tasks) setTasks(d.tasks);
-          if (d.projects) setProjects(d.projects);
-          if (d.habits) setHabits(d.habits);
-          if (d.members) setMembers(d.members);
-          if (d.focusLog) setFocusLog(d.focusLog);
-          if (d.notifs) setNotifs(d.notifs);
-          if (d.stickyNote !== undefined) setStickyNote(d.stickyNote);
-          if (d.events) setEvents(d.events);
-          if (d.pomoStats) setPomoStats(d.pomoStats);
-          if (d.focusSettings) setFocusSettings(d.focusSettings);
-          if (d.settings) {
-            if (d.settings.soundOn !== undefined) setSoundOn(d.settings.soundOn);
-            if (d.settings.darkMode !== undefined) setDarkMode(d.settings.darkMode);
-            if (d.settings.showTeam !== undefined) setShowTeam(d.settings.showTeam);
-            if (d.settings.todaySortMode !== undefined) setTodaySortMode(d.settings.todaySortMode);
-            if (d.settings.projectTab !== undefined) setProjectTab(d.settings.projectTab);
-            if (d.settings.filter !== undefined) setFilter(d.settings.filter);
+          
+          if (pendingSave.current) {
+            // Local changes are pending, perform intelligent merge to preserve them
+            if (d._version) dataVersion.current = Math.max(dataVersion.current, d._version);
+            if (d.tasks) setTasks(prev => mergeBy(prev, d.tasks, "id"));
+            if (d.projects) setProjects(prev => mergeBy(prev, d.projects, "id"));
+            if (d.habits) setHabits(prev => mergeBy(prev, d.habits, "name"));
+            if (d.members) setMembers(prev => mergeBy(prev, d.members, "name"));
+            if (d.events) setEvents(prev => mergeBy(prev, d.events, "id"));
+            if (d.notifs) setNotifs(prev => mergeBy(prev, d.notifs, "id"));
+            if (d.friends) setFriends(prev => mergeBy(prev, d.friends, "id"));
+            if (d.focusLog) setFocusLog(prev => mergeLog(prev, d.focusLog));
+            // Keep remote state for primitives since they can't be easily merged
+            if (d.stickyNote !== undefined) setStickyNote(d.stickyNote);
+            if (d.pomoStats) setPomoStats(d.pomoStats);
+            if (d.focusSettings) setFocusSettings(d.focusSettings);
+          } else {
+            // Safe to overwrite local state
+            skipNextSave.current = true;
+            if (d._version) dataVersion.current = Math.max(dataVersion.current, d._version);
+            if (d.tasks) setTasks(d.tasks);
+            if (d.projects) setProjects(d.projects);
+            if (d.habits) setHabits(d.habits);
+            if (d.members) setMembers(d.members);
+            if (d.friends) setFriends(d.friends);
+            if (d.focusLog) setFocusLog(d.focusLog);
+            if (d.notifs) setNotifs(d.notifs);
+            if (d.stickyNote !== undefined) setStickyNote(d.stickyNote);
+            if (d.events) setEvents(d.events);
+            if (d.pomoStats) setPomoStats(d.pomoStats);
+            if (d.focusSettings) setFocusSettings(d.focusSettings);
+            if (d.settings) {
+              if (d.settings.soundOn !== undefined) setSoundOn(d.settings.soundOn);
+              if (d.settings.darkMode !== undefined) setDarkMode(d.settings.darkMode);
+              if (d.settings.showTeam !== undefined) setShowTeam(d.settings.showTeam);
+              if (d.settings.todaySortMode !== undefined) setTodaySortMode(d.settings.todaySortMode);
+              if (d.settings.projectTab !== undefined) setProjectTab(d.settings.projectTab);
+              if (d.settings.filter !== undefined) setFilter(d.settings.filter);
+            }
           }
         })
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          setConnectionStatus("connected");
+        } else if (status === "CLOSED" || status === "CHANNEL_ERROR") {
+          setConnectionStatus("disconnected");
+        } else {
+          setConnectionStatus("connecting");
+        }
+      });
+    channelRef.current = channel;
+    return () => { supabase.removeChannel(channel); };
+  }, [workspace.id]);
+
+  // --- 2b. Global Presence (Trạng thái Online Toàn cầu) ---
+  useEffect(() => {
+    const presenceChannel = supabase
+      .channel('global_presence', {
+        config: { presence: { key: currentUser.id } }
+      })
       .on("presence", { event: "sync" }, () => {
-        const state = channel.presenceState();
+        const state = presenceChannel.presenceState();
         const users = Object.values(state).flat().map(u => ({
           id: u.user_id,
           name: u.user_name,
@@ -1035,34 +1086,30 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
-          setConnectionStatus("connected");
-          await channel.track({
+          await presenceChannel.track({
             user_id: currentUser.id,
             user_name: currentUser.name,
             friend_code: currentUser.friendCode,
             online_at: new Date().toISOString()
           });
-        } else if (status === "CLOSED" || status === "CHANNEL_ERROR") {
-          setConnectionStatus("disconnected");
-        } else {
-          setConnectionStatus("connecting");
         }
       });
-    channelRef.current = channel;
-    presenceRef.current = channel;
-    return () => { supabase.removeChannel(channel); };
-  }, [workspace.id, currentUser.id, currentUser.name, currentUser.friendCode]);
+    presenceRef.current = presenceChannel;
+    return () => { supabase.removeChannel(presenceChannel); };
+  }, [currentUser.id, currentUser.name, currentUser.friendCode]);
 
   // --- 3. Tự động reconnect khi tab focus lại (tối ưu mobile/tab switching) ---
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === "visible" && channelRef.current) {
-        const state = channelRef.current.state;
-        if (state === "closed" || state === "errored") {
-          channelRef.current.subscribe();
+      if (document.visibilityState === "visible") {
+        if (channelRef.current) {
+          const state = channelRef.current.state;
+          if (state === "closed" || state === "errored") channelRef.current.subscribe();
         }
         if (presenceRef.current) {
-          presenceRef.current.track({
+          const state = presenceRef.current.state;
+          if (state === "closed" || state === "errored") presenceRef.current.subscribe();
+          else presenceRef.current.track({
             user_id: currentUser.id,
             user_name: currentUser.name,
             friend_code: currentUser.friendCode,
