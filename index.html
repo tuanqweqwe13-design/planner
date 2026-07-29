@@ -826,10 +826,11 @@ function WorkspaceScreen({ session, onReady }) {
   );
 }
 
-// ---------------- Root gate: Auth -> Workspace -> App ----------------
+// ---------------- Root gate: Auth -> tự động tạo/lấy workspace -> App ----------------
 function RootGate() {
   const [session, setSession] = useState(undefined); // undefined = loading, null = logged out
   const [workspace, setWorkspace] = useState(null);
+  const [settingUp, setSettingUp] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -840,16 +841,48 @@ function RootGate() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  if (session === undefined) {
+  // Tự động lấy workspace có sẵn của user, hoặc tạo mới nếu chưa có — không hiện màn hình chọn
+  useEffect(() => {
+    if (!session || workspace) return;
+    let cancelled = false;
+    (async () => {
+      setSettingUp(true);
+      const { data: memberships } = await supabase
+        .from("workspace_members")
+        .select("workspaces(id, name, invite_code)")
+        .eq("user_id", session.user.id)
+        .limit(1);
+      if (!cancelled && memberships && memberships.length && memberships[0].workspaces) {
+        setWorkspace(memberships[0].workspaces);
+        setSettingUp(false);
+        return;
+      }
+      const displayName = session.user.user_metadata?.name || session.user.email.split("@")[0];
+      const invite_code = genInviteCode();
+      const { data: ws, error } = await supabase.from("workspaces")
+        .insert({ name: `Nhóm của ${displayName}`, invite_code, owner_id: session.user.id }).select().single();
+      if (!error && ws) {
+        await supabase.from("workspace_members").insert({ workspace_id: ws.id, user_id: session.user.id, role: "owner" });
+        if (!cancelled) setWorkspace(ws);
+      }
+      if (!cancelled) setSettingUp(false);
+    })();
+    return () => { cancelled = true; };
+  }, [session, workspace]);
+
+  if (session === undefined || (session && !workspace)) {
     return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Đang tải...</div>;
   }
   if (!session) return <AuthScreen onAuthed={setSession} />;
-  if (!workspace) return <WorkspaceScreen session={session} onReady={setWorkspace} />;
-  return <WorkFlowProApp session={session} workspace={workspace} onLeaveWorkspace={() => setWorkspace(null)} />;
+  return <WorkFlowProApp session={session} workspace={workspace} onSwitchWorkspace={setWorkspace} />;
 }
 
-export default function WorkFlowProApp({ session, workspace, onLeaveWorkspace }) {
-  const [currentUser, setCurrentUser] = useState(null);
+export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }) {
+  const [currentUser, setCurrentUser] = useState(() => {
+    const meta = session?.user?.user_metadata || {};
+    const displayName = meta.name || session?.user?.email?.split("@")[0] || "Bạn";
+    return { id: session?.user?.id, name: displayName, avatar: displayName[0].toUpperCase(), status: "Online" };
+  });
   const [tasks, setTasks] = useState(seedTasks);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [active, setActive] = useState("Bảng Điều Khiển");
@@ -1335,12 +1368,35 @@ export default function WorkFlowProApp({ session, workspace, onLeaveWorkspace })
     showToast("Đã xoá thành viên");
   };
 
+  // ---------------- chuyển sang / tham gia nhóm khác bằng mã mời ----------------
+  const joinWorkspaceByCode = async (code) => {
+    if (!code || !code.trim()) return;
+    const { data: ws, error } = await supabase.from("workspaces")
+      .select("*").eq("invite_code", code.trim().toUpperCase()).single();
+    if (error || !ws) { showToast("Không tìm thấy nhóm với mã này"); return; }
+    const { error: mErr } = await supabase.from("workspace_members")
+      .upsert({ workspace_id: ws.id, user_id: session.user.id, role: "member" });
+    if (mErr) { showToast("Không thể tham gia nhóm"); return; }
+    showToast(`Đã chuyển sang nhóm "${ws.name}"`);
+    onSwitchWorkspace(ws);
+  };
+
+  // ---------------- đổi tên hiển thị (lưu vào tài khoản Supabase) ----------------
+  const updateDisplayName = async (newName) => {
+    const trimmed = (newName || "").trim();
+    if (!trimmed) return;
+    const { error } = await supabase.auth.updateUser({ data: { name: trimmed } });
+    if (error) { showToast("Không thể đổi tên, thử lại sau"); return; }
+    setCurrentUser((u) => ({ ...u, name: trimmed, avatar: trimmed[0].toUpperCase() }));
+    showToast("Đã cập nhật tên hiển thị");
+  };
+
   // ---------------- personal project ops ----------------
-  const addProject = (name) => {
+  const addProject = (name, type = "personal") => {
     if (!name.trim()) return;
     playSound("add", soundOn);
     const grad = projectGrads[projects.length % projectGrads.length];
-    setProjects((ps) => [...ps, { id: "p" + Date.now(), name: name.trim(), grad, progress: 0, notes: "", desc: "", attachments: [], plans: [] }]);
+    setProjects((ps) => [...ps, { id: "p" + Date.now(), name: name.trim(), grad, progress: 0, notes: "", desc: "", attachments: [], plans: [], type }]);
     showToast("Đã thêm dự án mới");
   };
   const removeProject = (id) => {
@@ -1541,10 +1597,7 @@ export default function WorkFlowProApp({ session, workspace, onLeaveWorkspace })
     return true;
   });
 
-  if (!currentUser) {
-    return <LoginView onLogin={(user) => setCurrentUser(user)} darkMode={darkMode} setDarkMode={setDarkMode} soundOn={soundOn} setSoundOn={setSoundOn} playSound={playSound} />;
-  }
-
+  
   return (
     <div className={darkMode ? "wf-dark wf-layout" : "wf-layout"} style={{ fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", background: "var(--wf-page-bg)", minHeight: "100vh", display: "flex", color: "var(--wf-text)", position: "relative", overflow: "hidden", transition: "background 0.35s ease, color 0.35s ease" }}>
       <GlobalStyles />
@@ -1872,7 +1925,7 @@ export default function WorkFlowProApp({ session, workspace, onLeaveWorkspace })
         })()}
 
         {active === "Công Việc Nhóm" && !openProjectId && (
-          <GroupProjectsGallery projects={projects.filter(p => p.type === "team")} friends={friends} onOpen={(p) => { setOpenProjectId(p.id); setProjectTab("nhiemvu"); }} onAdd={addProject} onRemove={removeProject} onAddFriend={() => {}} onUpdateProject={(id, patch) => setProjects(ps => ps.map(p => p.id === id ? { ...p, ...patch } : p))} />
+          <GroupProjectsGallery projects={projects.filter(p => p.type === "team")} friends={friends} onOpen={(p) => { setOpenProjectId(p.id); setProjectTab("nhiemvu"); }} onAdd={(name) => addProject(name, "team")} onRemove={removeProject} onAddFriend={() => {}} onUpdateProject={(id, patch) => setProjects(ps => ps.map(p => p.id === id ? { ...p, ...patch } : p))} workspace={workspace} onJoinByCode={joinWorkspaceByCode} />
         )}
         {active === "Công Việc Nhóm" && openProjectId && (() => {
           const openProject = projects.find((p) => p.id === openProjectId);
@@ -1909,7 +1962,7 @@ export default function WorkFlowProApp({ session, workspace, onLeaveWorkspace })
 
         {active === "Báo Cáo" && <ReportsView tasks={tasks} focusLog={focusLog} />}
 
-        {active === "Cài Đặt" && <SettingsView darkMode={darkMode} setDarkMode={setDarkMode} soundOn={soundOn} setSoundOn={setSoundOn} showTeam={showTeam} setShowTeam={setShowTeam} tasks={tasks} habits={habits} members={members} projects={projects} onReset={resetAllData} />}
+        {active === "Cài Đặt" && <SettingsView darkMode={darkMode} setDarkMode={setDarkMode} soundOn={soundOn} setSoundOn={setSoundOn} showTeam={showTeam} setShowTeam={setShowTeam} tasks={tasks} habits={habits} members={members} projects={projects} onReset={resetAllData} currentUser={currentUser} onUpdateName={updateDisplayName} />}
       </main>
 
       {/* Task detail modal */}
@@ -3293,10 +3346,20 @@ function ProjectWorkspace({ project, projects, tasks, projectTab, setProjectTab,
   );
 }
 
-function GroupProjectsGallery({ projects, friends, onOpen, onAdd, onRemove, onAddFriend, onUpdateProject }) {
+function GroupProjectsGallery({ projects, friends, onOpen, onAdd, onRemove, onAddFriend, onUpdateProject, workspace, onJoinByCode }) {
   const [draft, setDraft] = useState("");
   const [settingsProject, setSettingsProject] = useState(null);
   const [newCat, setNewCat] = useState("");
+  const [joinCodeDraft, setJoinCodeDraft] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const copyInviteCode = () => {
+    if (!workspace?.invite_code) return;
+    navigator.clipboard?.writeText(workspace.invite_code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  };
   
   const sp = settingsProject ? projects.find(p => p.id === settingsProject) : null;
   const spCategories = sp?.categories || ["Thiết kế", "Lập trình"];
@@ -3331,6 +3394,27 @@ function GroupProjectsGallery({ projects, friends, onOpen, onAdd, onRemove, onAd
         </div>
         
         <div style={{ flex: "1 1 250px", background: "var(--wf-surface)", borderRadius: 18, padding: 20, boxShadow: "0 8px 20px rgba(26,32,53,0.06)", alignSelf: "flex-start" }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}><Users size={18} color="#6366f1"/> Không gian nhóm</div>
+          {workspace && (
+            <div style={{ background: "var(--wf-bg)", border: "1px solid var(--wf-border)", borderRadius: 12, padding: 12, marginBottom: 10 }}>
+              <div style={{ fontSize: 12, color: "var(--wf-text-faint)", marginBottom: 6 }}>{workspace.name}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ flex: 1, fontFamily: "monospace", fontWeight: 700, fontSize: 15, letterSpacing: 1 }}>{workspace.invite_code}</div>
+                <button onClick={copyInviteCode} title="Sao chép mã mời" style={{ background: "var(--wf-hover-soft)", border: "none", borderRadius: 8, cursor: "pointer", padding: 6, display: "flex" }}>
+                  {copied ? <Check size={14} color="#10b981" /> : <Paperclip size={14} />}
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: "var(--wf-text-faint)", marginTop: 6 }}>Chia sẻ mã này để mời người khác vào nhóm</div>
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+            <input value={joinCodeDraft} onChange={(e) => setJoinCodeDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && joinCodeDraft.trim()) { onJoinByCode(joinCodeDraft); setJoinCodeDraft(""); } }}
+              placeholder="Nhập mã để tham gia nhóm khác" className="wf-input"
+              style={{ flex: 1, border: "1px solid var(--wf-border)", borderRadius: 10, padding: "8px 10px", fontSize: 12, outline: "none" }} />
+            <button onClick={() => { if (joinCodeDraft.trim()) { onJoinByCode(joinCodeDraft); setJoinCodeDraft(""); } }}
+              style={{ ...primaryBtnStyle, padding: "8px 12px", fontSize: 12 }}>Tham gia</button>
+          </div>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}><Users size={18} color="#6366f1"/> Danh sách Bạn bè</div>
           <button className="wf-btn wf-btn-primary" onClick={onAddFriend} style={{ ...primaryBtnStyle, width: "100%", padding: "10px", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, marginBottom: 16 }}><Link2 size={15}/> Lấy link mời kết bạn</button>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -4702,10 +4786,12 @@ function ToggleSwitch({ on, onChange }) {
   );
 }
 
-function SettingsView({ darkMode, setDarkMode, soundOn, setSoundOn, showTeam, setShowTeam, tasks, habits, members, projects, onReset }) {
+function SettingsView({ darkMode, setDarkMode, soundOn, setSoundOn, showTeam, setShowTeam, tasks, habits, members, projects, onReset, currentUser, onUpdateName }) {
   const [notifOn, setNotifOn] = useState(true);
   const [compactMode, setCompactMode] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [nameDraft, setNameDraft] = useState(currentUser?.name || "");
+  const [savedFlash, setSavedFlash] = useState(false);
 
   const rows = [
     { label: "Công việc", value: tasks.length },
@@ -4714,8 +4800,35 @@ function SettingsView({ darkMode, setDarkMode, soundOn, setSoundOn, showTeam, se
     { label: "Dự án cá nhân", value: projects.length },
   ];
 
+  const saveName = () => {
+    if (!nameDraft.trim() || nameDraft.trim() === currentUser?.name) return;
+    onUpdateName(nameDraft);
+    setSavedFlash(true);
+    setTimeout(() => setSavedFlash(false), 1500);
+  };
+
   return (
     <div style={{ display: "grid", gap: 16 }}>
+      <div style={{ background: "var(--wf-surface)", borderRadius: 20, padding: 20, boxShadow: "0 8px 20px rgba(26,32,53,0.06)" }}>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>Hồ sơ</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: "linear-gradient(135deg,#7c3aed,#ec4899)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 16, flexShrink: 0 }}>
+            {(currentUser?.avatar || currentUser?.name?.[0] || "?").toUpperCase()}
+          </div>
+          <div style={{ flex: 1, display: "flex", gap: 8 }}>
+            <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") saveName(); }}
+              placeholder="Tên hiển thị" className="wf-input"
+              style={{ flex: 1, border: "1px solid var(--wf-border)", borderRadius: 10, padding: "9px 12px", fontSize: 13, outline: "none" }} />
+            <button onClick={saveName} disabled={!nameDraft.trim() || nameDraft.trim() === currentUser?.name}
+              style={{ ...primaryBtnStyle, padding: "9px 16px", opacity: (!nameDraft.trim() || nameDraft.trim() === currentUser?.name) ? 0.5 : 1, cursor: (!nameDraft.trim() || nameDraft.trim() === currentUser?.name) ? "not-allowed" : "pointer" }}>
+              {savedFlash ? "Đã lưu ✓" : "Lưu tên"}
+            </button>
+          </div>
+        </div>
+        <div style={{ fontSize: 11.5, color: "var(--wf-text-faint)" }}>Tên này hiển thị với các thành viên khác trong nhóm của bạn.</div>
+      </div>
+
       <div style={{ background: "var(--wf-surface)", borderRadius: 20, padding: 20, boxShadow: "0 8px 20px rgba(26,32,53,0.06)" }}>
         <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 14 }}>Chung</div>
 
