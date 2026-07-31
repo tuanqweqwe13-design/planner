@@ -36,6 +36,8 @@
 }
 </script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<!-- Polyfill giúp kéo-thả (HTML5 Drag & Drop) hoạt động trên màn hình cảm ứng (điện thoại/tablet) -->
+<script src="https://cdn.jsdelivr.net/npm/@dragdroptouch/drag-drop-touch@latest/dist/drag-drop-touch.esm.min.js?autoload" type="module"></script>
 </head>
 <body>
 <div id="root"></div>
@@ -187,6 +189,8 @@ const GlobalStyles = () => (
     @keyframes wfGradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
     @keyframes wfBounceIn { 0% { transform: scale(0.75); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
     @keyframes wfShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    @keyframes wfSpin { to { transform: rotate(360deg); } }
+    .wf-spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(124,58,237,0.15); border-top-color: #7c3aed; animation: wfSpin 0.7s linear infinite; }
     @keyframes wfPulse { 0%,100%{opacity:1;} 50%{opacity:0.65;} }
 
     :focus-visible { outline: 2.5px solid #8b5cf6; outline-offset: 2px; border-radius: 8px; }
@@ -358,6 +362,7 @@ const GlobalStyles = () => (
     /* Main content header row */
     .wf-main-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 22px; flex-wrap: wrap; gap: 12px; }
     .wf-main-header-btn { display: flex; align-items: center; gap: 7px; background: linear-gradient(135deg,#7c3aed,#a855f7); color: #fff; border: none; border-radius: 16px; padding: 11px 20px; font-weight: 700; font-size: 13.5px; cursor: pointer; box-shadow: 0 8px 22px rgba(124,58,237,0.38); letter-spacing: 0.2px; white-space: nowrap; }
+    .wf-fab-add { display: none; }
 
     /* Motivation banner */
     .wf-motivation-banner { position: relative; overflow: hidden; background: linear-gradient(120deg,#7c3aed,#a855f7 40%,#ec4899 75%,#f59e0b 115%); border-radius: 24px; padding: 20px 28px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 16px 40px rgba(124,58,237,0.3); }
@@ -396,14 +401,42 @@ const GlobalStyles = () => (
       /* Layout */
       .wf-layout { flex-direction: column !important; }
       .wf-sidebar { position: fixed !important; top: 0; left: 0; bottom: 0; height: 100dvh !important; margin: 0 !important; border-radius: 0 !important; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); z-index: 100 !important; }
+      .wf-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.5); opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 99; backdrop-filter: blur(2px); }
+      .wf-overlay.open { opacity: 1; pointer-events: auto; }
       .wf-sidebar.open { transform: translateX(0); }
-      .wf-main { width: 100% !important; padding: 12px 16px !important; }
-      .wf-hamburger { display: flex !important; }
-      
+      .wf-main { width: 100% !important; padding: 10px 14px !important; }
+      .wf-main.wf-fab-space { padding-bottom: 90px !important; }
+      .wf-hamburger { display: flex !important; margin-bottom: 8px !important; padding-bottom: 8px !important; }
+
+      /* Ẩn banner động viên + rút gọn header để nhiệm vụ hiện ngay trong màn hình đầu tiên */
+      .wf-motivation-banner { display: none !important; }
+      .wf-main-header { margin-bottom: 10px !important; }
+      .wf-header-date { display: none !important; }
+
       /* Header */
       .wf-main-header { flex-direction: column; align-items: stretch; }
       .wf-main-header > div:first-child { min-width: 0; }
-      .wf-main-header-btn { width: 100%; justify-content: center; }
+
+      /* Thay nút "Thêm công việc mới" bằng nút nổi (FAB) ở góc dưới để thao tác 1 tay dễ hơn */
+      .wf-main-header-btn { display: none !important; }
+      .wf-fab-add { display: flex !important; align-items: center; justify-content: center; position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg,#7c3aed,#a855f7); color: #fff; border: none; box-shadow: 0 10px 28px rgba(124,58,237,0.45); cursor: pointer; z-index: 60; transition: transform 0.15s ease; }
+      .wf-fab-add:active { transform: scale(0.92); }
+
+      /* Tăng vùng chạm cho các icon ở header cho dễ bấm bằng ngón tay */
+      .wf-header-actions { flex-wrap: wrap; gap: 4px !important; }
+      .wf-header-actions .wf-icon-btn { width: 36px !important; height: 36px !important; }
+
+      /* Bảng thông báo vừa với màn hình nhỏ, không bị tràn */
+      .wf-notif-panel { width: calc(100vw - 32px) !important; right: -4px !important; max-width: 360px; }
+
+      /* Toast tránh đè lên nút nổi (FAB) thêm việc */
+      .wf-toast { bottom: calc(88px + env(safe-area-inset-bottom, 0px)) !important; }
+
+      /* Thu gọn padding các thẻ Hôm nay / Trễ hạn / Thói quen để hiện nhiều nội dung hơn không cần cuộn */
+      .wf-dash-card-tight { padding: 12px !important; border-radius: 16px !important; }
+      .wf-stat-card-tight { padding: 12px 14px 10px !important; border-radius: 16px !important; }
+      .wf-dash-stat-grid { margin-bottom: 12px !important; }
+      .wf-dash-row1-grid { margin-bottom: 10px !important; gap: 10px !important; }
       
       /* Kanban */
       .wf-kanban-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 16px 16px; }
@@ -416,9 +449,16 @@ const GlobalStyles = () => (
     /* ============================================================
        BREAKPOINT: 600px (Mobile)
        ============================================================ */
+    @media (max-width: 768px) {
+      .wf-dash-mobile-order { display: flex !important; flex-direction: column !important; }
+      .wf-dash-order-1 { order: 1 !important; }
+      .wf-dash-order-2 { order: 2 !important; }
+      .wf-dash-order-3 { order: 3 !important; }
+    }
     @media (max-width: 600px) {
       /* Grids become 1 column only on smaller screens, giving iPads 2 columns */
-      .wf-dash-stat-grid, .wf-dash-row1-grid, .wf-dash-row2-grid, .wf-grid-4, .wf-grid-3, .wf-grid-2, .wf-pomo-stats-grid, .wf-pomo-chart-grid, .wf-pomo-settings-grid, .wf-habit-cards-grid, .wf-reports-stat-grid, .wf-settings-stat-grid, .wf-members-badge-grid { grid-template-columns: 1fr !important; }
+      .wf-dash-stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
+      .wf-dash-row1-grid, .wf-dash-row2-grid, .wf-grid-4, .wf-grid-3, .wf-grid-2, .wf-pomo-stats-grid, .wf-pomo-chart-grid, .wf-pomo-settings-grid, .wf-habit-cards-grid, .wf-reports-stat-grid, .wf-settings-stat-grid, .wf-members-badge-grid { grid-template-columns: 1fr !important; }
       
       /* Task list */
       .wf-task-actions { flex-direction: row; gap: 4px; }
@@ -791,7 +831,7 @@ function WorkspaceScreen({ session, onReady }) {
     onReady(data);
   };
 
-  if (workspaces === null) return <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center" }}>Đang tải...</div>;
+  if (workspaces === null) return <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column", gap: 12, alignItems: "center", justifyContent: "center", color: "var(--wf-text-muted)", fontSize: 13 }}><div className="wf-spinner" />Đang tải...</div>;
 
   return (
     <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", fontFamily: "'Plus Jakarta Sans',sans-serif" }}>
@@ -884,7 +924,7 @@ function RootGate() {
   }, [session, workspace]);
 
   if (session === undefined || (session && !workspace)) {
-    return <div style={{ minHeight: "100dvh", display: "flex", alignItems: "center", justifyContent: "center" }}>Đang tải...</div>;
+    return <div style={{ minHeight: "100dvh", display: "flex", flexDirection: "column", gap: 12, alignItems: "center", justifyContent: "center", color: "var(--wf-text-muted)", fontSize: 13 }}><div className="wf-spinner" />Đang tải...</div>;
   }
   if (!session) return <AuthScreen onAuthed={setSession} />;
   return <WorkFlowProApp session={session} workspace={workspace} onSwitchWorkspace={setWorkspace} />;
@@ -914,6 +954,10 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
   const [tasks, setTasks] = useState(seedTasks);
   const [confirmConvert, setConfirmConvert] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  useEffect(() => {
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [mobileOpen]);
   const [active, setActive] = useState("Bảng Điều Khiển");
   const [modalOpen, setModalOpen] = useState(false);
   const [modalStep, setModalStep] = useState("choose");
@@ -921,6 +965,7 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
   const [form, setForm] = useState({ title: "", due: "", owner: "Bạn", project: "Việc lẻ", priority: "Vừa", desc: "", subtasks: [], workTime: "" });
   const [modalSubDraft, setModalSubDraft] = useState("");
   const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
   const [detailTaskId, setDetailTaskId] = useState(null);
   const [commentDraft, setCommentDraft] = useState("");
   const [pomodoro, setPomodoro] = useState(null); // {taskId, secondsLeft}
@@ -958,6 +1003,16 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
   const [connectionStatus, setConnectionStatus] = useState("connecting"); // "connected" | "connecting" | "disconnected"
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [stickyNote, setStickyNote] = useState("");
+  const [dailyRemindOn, setDailyRemindOn] = useState(() => localStorage.getItem("wf_daily_remind") === "1");
+  useEffect(() => {
+    // Nếu người dùng đã bật nhắc việc trước đó nhưng sau đó thu hồi quyền thông báo trong trình duyệt,
+    // đồng bộ lại trạng thái để chuông không hiển thị "đang bật" trong khi thực tế không gửi được.
+    if (dailyRemindOn && typeof Notification !== "undefined" && Notification.permission !== "granted") {
+      setDailyRemindOn(false);
+      localStorage.setItem("wf_daily_remind", "0");
+    }
+    // eslint-disable-next-line
+  }, []);
   const [events, setEvents] = useState([]);
   const skipNextSave = useRef(false);
   const saveTimer = useRef(null);
@@ -1224,6 +1279,51 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
     // eslint-disable-next-line
   }, [focusTimer.secondsLeft]);
 
+  // ---------------- Thông báo công việc trong ngày (Web Notification) ----------------
+  const enableDailyReminders = async () => {
+    if (typeof Notification === "undefined") { showToast("Trình duyệt này không hỗ trợ thông báo."); return; }
+    if (Notification.permission === "denied") {
+      showToast("Thông báo đang bị chặn. Vào cài đặt trình duyệt (biểu tượng ổ khoá cạnh địa chỉ trang) để bật lại quyền thông báo cho trang này.");
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm === "granted") {
+      localStorage.setItem("wf_daily_remind", "1");
+      setDailyRemindOn(true);
+      new Notification("WorkFlowPro", { body: "Đã bật thông báo! Bạn sẽ được nhắc việc cần làm mỗi ngày.", icon: "/icon-192.png" });
+      localStorage.removeItem("wf_last_remind_date");
+    } else {
+      showToast("Bạn cần cho phép thông báo trong trình duyệt để dùng tính năng này.");
+    }
+  };
+  const disableDailyReminders = () => {
+    localStorage.setItem("wf_daily_remind", "0");
+    setDailyRemindOn(false);
+  };
+
+  useEffect(() => {
+    if (!dailyRemindOn || typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    const checkAndNotify = () => {
+      const lastDate = localStorage.getItem("wf_last_remind_date");
+      if (lastDate === todayStr) return;
+      const todayList = tasks.filter(t => t.due === todayStr && t.status !== "done");
+      const overdueList = tasks.filter(t => t.due && t.due < todayStr && t.status !== "done");
+      if (todayList.length === 0 && overdueList.length === 0) return;
+      const parts = [];
+      if (todayList.length) parts.push(`🎯 ${todayList.length} việc hôm nay: ${todayList.slice(0,3).map(t=>t.title).join(", ")}${todayList.length>3 ? "…" : ""}`);
+      if (overdueList.length) parts.push(`⚠️ ${overdueList.length} việc trễ hạn`);
+      try {
+        const n = new Notification("WorkFlowPro — Việc cần làm hôm nay", { body: parts.join("\n"), icon: "/icon-192.png", tag: "wf-daily-remind" });
+        n.onclick = () => { window.focus(); n.close(); };
+        localStorage.setItem("wf_last_remind_date", todayStr);
+      } catch (e) {}
+    };
+    checkAndNotify();
+    const interval = setInterval(checkAndNotify, 30 * 60 * 1000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line
+  }, [dailyRemindOn, tasks]);
+
   const focusModeMinutes = (mode) => focusSettings[mode === "work" ? "work" : mode === "short" ? "short" : "long"];
 
   const completeFocusSession = () => {
@@ -1332,7 +1432,19 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
   };
   const toggleZenMode = () => { playSound("click", soundOn); setZenMode((z) => !z); };
 
-  const showToast = (m) => { setToast(m); setTimeout(() => setToast(null), 2200); };
+  const showToast = (m, opts) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    const isObj = m && typeof m === "object";
+    const text = isObj ? m.text : m;
+    const actionLabel = isObj ? m.actionLabel : opts?.actionLabel;
+    const onAction = isObj ? m.onAction : opts?.onAction;
+    const duration = (isObj ? m.duration : opts?.duration) || (actionLabel ? 5000 : 2200);
+    setToast({ text, actionLabel, onAction });
+    toastTimer.current = setTimeout(() => setToast(null), duration);
+  };
+  const showUndoToast = (text, onUndo) => {
+    showToast({ text, actionLabel: "Hoàn tác", onAction: onUndo, duration: 5000 });
+  };
 
   // ---------------- derived stats ----------------
   const stats = useMemo(() => {
@@ -1468,14 +1580,15 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
   const removeTask = (id) => { 
     playSound("remove", soundOn); 
     const target = tasks.find(t => t.id === id);
-    if (target && target.lessonId) {
+    if (!target) return;
+    if (target.lessonId) {
       setProjects(ps => ps.map(p => ({
         ...p,
         plans: updateNodeRecursively(p.plans || [], target.lessonId, { date: "", done: false })
       })));
     }
     setTasks((ts) => ts.filter((t) => t.id !== id)); 
-    showToast("Đã xoá công việc"); 
+    showUndoToast(`Đã xoá "${target.title}"`, () => setTasks(ts => [target, ...ts]));
     setDetailTaskId(null); 
   };
   const toggleSubtask = (taskId, idx) => {
@@ -1548,8 +1661,15 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
   };
   const removeHabit = (name) => {
     playSound("remove", soundOn);
+    const idx = habits.findIndex((h) => h.name === name);
+    if (idx === -1) return;
+    const target = habits[idx];
     setHabits((hs) => hs.filter((h) => h.name !== name));
-    showToast("Đã xoá thói quen");
+    showUndoToast(`Đã xoá thói quen "${name}"`, () => setHabits(hs => {
+      const next = [...hs];
+      next.splice(Math.min(idx, next.length), 0, target);
+      return next;
+    }));
   };
   const toggleHabitDay = (name, dayIdx) => {
     playSound("click", soundOn);
@@ -1575,8 +1695,10 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
   };
   const removeMember = (name) => {
     playSound("remove", soundOn);
+    const target = members.find((m) => m.name === name);
+    if (!target) return;
     setMembers((ms) => ms.filter((m) => m.name !== name));
-    showToast("Đã xoá thành viên");
+    showUndoToast(`Đã xoá thành viên "${name}"`, () => setMembers(ms => [...ms, target]));
   };
 
   // ---------------- chuyển sang / tham gia nhóm khác bằng mã mời ----------------
@@ -1632,9 +1754,11 @@ export default function WorkFlowProApp({ session, workspace, onSwitchWorkspace }
   };
 const removeProject = (id) => {
     playSound("remove", soundOn);
+    const target = projects.find((p) => p.id === id);
+    if (!target) return;
     setProjects((ps) => ps.filter((p) => p.id !== id));
     setOpenProjectId((op) => (op === id ? null : op));
-    showToast("Đã xoá dự án");
+    showUndoToast(`Đã xoá dự án "${target.name}"`, () => setProjects(ps => [...ps, target]));
   };
   const updateProjectDesc = (id, desc) => {
     setProjects((ps) => ps.map((p) => p.id === id ? { ...p, desc } : p));
@@ -1875,7 +1999,7 @@ const removeProject = (id) => {
                   const Icon = item.icon; const isActive = active === item.label;
                   const isDashboard = item.label === "Bảng Điều Khiển";
                   return (
-                    <button key={item.label} className="wf-nav-btn" onClick={() => { playSound("click", soundOn); setActive(item.label); setOpenProjectId(null); }}
+                    <button key={item.label} className="wf-nav-btn" onClick={() => { playSound("click", soundOn); setActive(item.label); setOpenProjectId(null); setMobileOpen(false); }}
                       style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "11px 14px", borderRadius: 16, border: isDashboard ? "1px solid rgba(245,158,11,0.5)" : "none", cursor: "pointer", background: isActive ? (isDashboard ? "linear-gradient(135deg,#f59e0b,#ef4444)" : "linear-gradient(135deg,#7c3aed,#a855f7)") : (isDashboard ? "linear-gradient(135deg,rgba(245,158,11,0.15),rgba(239,68,68,0.15))" : "transparent"), color: isActive ? "#fff" : (isDashboard ? "#ea580c" : "var(--wf-text-muted)"), fontWeight: isActive ? 700 : (isDashboard ? 700 : 600), fontSize: 13.5, textAlign: "left", boxShadow: isActive ? (isDashboard ? "0 8px 22px rgba(245,158,11,0.38)" : "0 8px 22px rgba(124,58,237,0.38)") : (isDashboard ? "0 4px 12px rgba(245,158,11,0.1)" : "none"), transition: "all 0.2s cubic-bezier(0.34,1.56,0.64,1)", marginBottom: 6 }}>
                       <Icon size={16} />{item.label}
                     </button>
@@ -1957,7 +2081,7 @@ const removeProject = (id) => {
       </aside>
 
       {/* Main */}
-      <main style={{ flex: 1, padding: "24px 28px", minWidth: 0, position: "relative", zIndex: 1, overflowY: "auto", height: "100dvh" }} className="wf-main wf-scrollbar">
+      <main style={{ flex: 1, padding: "24px 28px", minWidth: 0, position: "relative", zIndex: 1, overflowY: "auto", height: "100dvh" }} className="wf-main wf-fab-space wf-scrollbar">
         {/* Hamburger button for mobile - top of main content */}
         <div style={{ display: "none", alignItems: "center", gap: 10, marginBottom: 14, paddingBottom: 14, borderBottom: "1px solid var(--wf-border-soft)" }} className="wf-hamburger">
           <button onClick={() => { setMobileOpen(true); playSound("click", soundOn); }}
@@ -1983,14 +2107,14 @@ const removeProject = (id) => {
               {React.createElement(Object.values(navSections).flat().find((i) => i.label === active)?.icon || LayoutDashboard, { size: 20, color: "#6366f1" })}
               <h1 className="wf-heading" style={{ fontSize: 25, fontWeight: 800, margin: 0 }}>{active}</h1>
             </div>
-            <p style={{ color: "var(--wf-text-faint)", fontSize: 13, margin: "4px 0 0 28px" }}>Hôm nay: {(() => {
+            <p className="wf-header-date" style={{ color: "var(--wf-text-faint)", fontSize: 13, margin: "4px 0 0 28px" }}>Hôm nay: {(() => {
               const d = new Date(todayStr);
               const days = ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
               return `${days[d.getDay()]}, ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
             })()}</p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--wf-surface)", borderRadius: 16, padding: "8px 12px", boxShadow: "0 4px 14px rgba(0,0,0,0.03)", border: "1px solid var(--wf-border-soft)" }}>
+            <div className="wf-header-actions" style={{ display: "flex", alignItems: "center", gap: 6, background: "var(--wf-surface)", borderRadius: 16, padding: "8px 12px", boxShadow: "0 4px 14px rgba(0,0,0,0.03)", border: "1px solid var(--wf-border-soft)" }}>
               <button
                 onClick={() => { setDarkMode((d) => !d); playSound("click", soundOn); }}
                 title={darkMode ? "Chế độ sáng" : "Chế độ tối"}
@@ -2006,6 +2130,14 @@ const removeProject = (id) => {
                 style={{ background: "none", border: "none", cursor: "pointer", color: soundOn ? "#6366f1" : "var(--wf-text-faint)", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8 }}
               >
                 {soundOn ? "🔊" : "🔇"}
+              </button>
+              <button
+                onClick={() => { dailyRemindOn ? disableDailyReminders() : enableDailyReminders(); playSound("click", soundOn); }}
+                title={dailyRemindOn ? "Tắt nhắc việc hàng ngày" : "Bật nhắc việc hàng ngày (thông báo trên điện thoại)"}
+                className="wf-icon-btn"
+                style={{ background: "none", border: "none", cursor: "pointer", color: dailyRemindOn ? "#10b981" : "var(--wf-text-faint)", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8 }}
+              >
+                {dailyRemindOn ? "🔔" : "🔕"}
               </button>
               <div style={{ width: 1, height: 20, background: "var(--wf-border)", margin: "0 4px" }} />
               <div style={{ position: "relative" }}>
@@ -2033,7 +2165,7 @@ const removeProject = (id) => {
                 {showNotifs && (
                   <>
                     <div style={{ position: "fixed", inset: 0, zIndex: 90 }} onClick={() => setShowNotifs(false)} />
-                    <div style={{ position: "absolute", top: 40, right: 0, width: 320, background: "var(--wf-surface)", borderRadius: 16, boxShadow: "0 12px 40px rgba(0,0,0,0.12)", border: "1px solid var(--wf-border-soft)", zIndex: 100, overflow: "hidden" }}>
+                    <div className="wf-notif-panel" style={{ position: "absolute", top: 40, right: 0, width: 320, background: "var(--wf-surface)", borderRadius: 16, boxShadow: "0 12px 40px rgba(0,0,0,0.12)", border: "1px solid var(--wf-border-soft)", zIndex: 100, overflow: "hidden" }}>
                       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", borderBottom: "1px solid var(--wf-border-soft)", background: "var(--wf-page-bg)" }}>
                         <div style={{ fontWeight: 800, fontSize: 13, color: "var(--wf-text)" }}>Thông báo</div>
                         <button onClick={() => setNotifs(ns => ns.map(n => ({...n, read: true})))} style={{ background: "none", border: "none", fontSize: 11, color: "#6366f1", fontWeight: 700, cursor: "pointer" }}>Đánh dấu đã đọc</button>
@@ -2078,6 +2210,9 @@ const removeProject = (id) => {
             </div>
             <button className="wf-btn wf-main-header-btn" onClick={() => openAddModal()}>
               <Plus size={16} /> Thêm công việc mới
+            </button>
+            <button className="wf-fab-add" onClick={() => openAddModal()} title="Thêm công việc mới">
+              <Plus size={24} />
             </button>
           </div>
         </div>
@@ -2351,9 +2486,8 @@ const removeProject = (id) => {
                         </div>
                       </div>
                       <button onClick={() => {
-                        if (confirm("Bạn có chắc chắn muốn xóa người bạn này?")) {
-                          setFriends(prev => prev.filter(x => x.id !== f.id));
-                        }
+                        setFriends(prev => prev.filter(x => x.id !== f.id));
+                        showUndoToast(`Đã xoá "${dispName}" khỏi danh sách bạn bè`, () => setFriends(prev => [...prev, f]));
                       }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-border)", padding: 6, opacity: 0.6, transition: "all 0.2s" }} title="Xóa bạn bè" onMouseEnter={(e) => { e.currentTarget.style.opacity = 1; e.currentTarget.style.color = "#ef4444"; }} onMouseLeave={(e) => { e.currentTarget.style.opacity = 0.6; e.currentTarget.style.color = "var(--wf-border)"; }}>
                         <Trash2 size={16} />
                       </button>
@@ -2567,8 +2701,14 @@ const removeProject = (id) => {
       )}
 
       {toast && (
-        <div className="wf-toast" style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#1a2035", color: "#fff", padding: "10px 18px", borderRadius: 10, fontSize: 13, fontWeight: 500, zIndex: 60, boxShadow: "0 8px 20px rgba(0,0,0,0.2)" }}>
-          {toast}
+        <div className="wf-toast" style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#1a2035", color: "#fff", padding: "10px 12px 10px 18px", borderRadius: 10, fontSize: 13, fontWeight: 500, zIndex: 120, boxShadow: "0 8px 20px rgba(0,0,0,0.2)", display: "flex", alignItems: "center", gap: 10, maxWidth: "calc(100vw - 32px)" }}>
+          <span>{toast.text}</span>
+          {toast.actionLabel && (
+            <button onClick={() => { toast.onAction && toast.onAction(); playSound("click", soundOn); setToast(null); if (toastTimer.current) clearTimeout(toastTimer.current); }}
+              style={{ background: "rgba(255,255,255,0.15)", border: "none", color: "#fff", fontWeight: 800, fontSize: 12.5, padding: "6px 12px", borderRadius: 8, cursor: "pointer", whiteSpace: "nowrap" }}>
+              {toast.actionLabel}
+            </button>
+          )}
         </div>
       )}
 
@@ -2611,9 +2751,8 @@ function DashboardView({ showTeam, currentUser, tasks, projects, statCards, open
   const habitsDone = habits.filter((h) => h.checked[todayIdx]).length;
   const inboxTasks = tasks.filter(t => !t.due && t.status !== "done");
   const todayTasks = tasks.filter(t => t.due === todayStr);
-  const allTodayTasks = tasks.filter(t => t.due === todayStr);
-  const todayDoneCount = allTodayTasks.filter(t => t.status === "done").length;
-  const todayTotalCount = allTodayTasks.length;
+  const todayDoneCount = todayTasks.filter(t => t.status === "done").length;
+  const todayTotalCount = todayTasks.length;
   const todayPct = todayTotalCount > 0 ? Math.round((todayDoneCount / todayTotalCount) * 100) : 0;
   const overdueTasks = tasks.filter(t => t.due && t.due < todayStr && t.status !== "done");
 
@@ -2636,13 +2775,13 @@ function DashboardView({ showTeam, currentUser, tasks, projects, statCards, open
   const statEmojis = ["✅","⏰","🚨","🏃"];
 
   return (
-    <>
+    <div className="wf-dash-mobile-order">
       {/* ── Stat Cards ── */}
-      <div className="wf-dash-stat-grid">
+      <div className="wf-dash-stat-grid wf-dash-order-2">
         {statCardsWithHabit.map((c, ci) => {
           const Icon = c.icon;
           return (
-            <div key={c.label} className="wf-card-pop" style={{ position: "relative", borderRadius: 22, padding: "20px 20px 16px", overflow: "hidden", background: statGrads[ci], color: "#fff", boxShadow: ["0 8px 28px rgba(109,40,217,0.38)","0 8px 28px rgba(220,38,38,0.35)","0 8px 28px rgba(14,116,163,0.35)","0 8px 28px rgba(5,150,105,0.35)"][ci] }}>
+            <div key={c.label} className="wf-card-pop wf-stat-card-tight" style={{ position: "relative", borderRadius: 22, padding: "20px 20px 16px", overflow: "hidden", background: statGrads[ci], color: "#fff", boxShadow: ["0 8px 28px rgba(109,40,217,0.38)","0 8px 28px rgba(220,38,38,0.35)","0 8px 28px rgba(14,116,163,0.35)","0 8px 28px rgba(5,150,105,0.35)"][ci] }}>
               {celebrate && ci === 0 && <Confetti />}
               <div style={{ position: "absolute", inset: 0, background: "linear-gradient(105deg,rgba(255,255,255,0) 40%,rgba(255,255,255,0.18) 50%,rgba(255,255,255,0) 60%)", backgroundSize: "200% 100%", animation: "wfShimmer 3s infinite" }} />
               <div style={{ position: "absolute", top: -20, right: -20, width: 90, height: 90, background: "rgba(255,255,255,0.1)", borderRadius: "50%" }} />
@@ -2661,15 +2800,15 @@ function DashboardView({ showTeam, currentUser, tasks, projects, statCards, open
       </div>
 
       {celebrate && (
-        <div style={{ textAlign: "center", fontSize: 13.5, fontWeight: 800, background: "linear-gradient(90deg,#6d28d9,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: 16 }}>
+        <div className="wf-dash-order-2" style={{ textAlign: "center", fontSize: 13.5, fontWeight: 800, background: "linear-gradient(90deg,#6d28d9,#ec4899)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", marginBottom: 16 }}>
           🎉 Tuyệt vời! Bạn đã hoàn thành 100% công việc hôm nay!
         </div>
       )}
 
-      {/* ── Row 1: Today / Overdue+Inbox / Habits ── */}
-      <div className="wf-dash-row1-grid">
+      {/* ── Row 1: Today / Overdue+Inbox / Habits (ưu tiên hiển thị đầu tiên trên di động) ── */}
+      <div className="wf-dash-row1-grid wf-dash-order-1">
         {/* Today */}
-        <div style={{ background: "var(--wf-surface)", borderRadius: 20, padding: 18, border: "1px solid rgba(220,38,38,0.12)", position: "relative", overflow: "hidden", boxShadow: "0 4px 20px rgba(220,38,38,0.07)" }}>
+        <div className="wf-dash-card-tight" style={{ background: "var(--wf-surface)", borderRadius: 20, padding: 18, border: "1px solid rgba(220,38,38,0.12)", position: "relative", overflow: "hidden", boxShadow: "0 4px 20px rgba(220,38,38,0.07)" }}>
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "linear-gradient(90deg,#dc2626,#f97316)" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -2699,7 +2838,7 @@ function DashboardView({ showTeam, currentUser, tasks, projects, statCards, open
         </div>
 
         {/* Overdue + Inbox */}
-        <div style={{ background: "var(--wf-surface)", borderRadius: 20, padding: 18, border: "1px solid rgba(124,58,237,0.1)", position: "relative", overflow: "hidden", boxShadow: "0 4px 20px rgba(124,58,237,0.06)" }}>
+        <div className="wf-dash-card-tight" style={{ background: "var(--wf-surface)", borderRadius: 20, padding: 18, border: "1px solid rgba(124,58,237,0.1)", position: "relative", overflow: "hidden", boxShadow: "0 4px 20px rgba(124,58,237,0.06)" }}>
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "linear-gradient(90deg,#7c3aed,#ec4899)" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: "#7c3aed" }}>⚠️ TRỄ HẠN</h3>
@@ -2735,7 +2874,7 @@ function DashboardView({ showTeam, currentUser, tasks, projects, statCards, open
         </div>
 
         {/* Habits */}
-        <div style={{ background: "var(--wf-surface)", borderRadius: 20, padding: 18, border: "1px solid rgba(249,115,22,0.12)", position: "relative", overflow: "hidden", boxShadow: "0 4px 20px rgba(249,115,22,0.07)" }}>
+        <div className="wf-dash-card-tight" style={{ background: "var(--wf-surface)", borderRadius: 20, padding: 18, border: "1px solid rgba(249,115,22,0.12)", position: "relative", overflow: "hidden", boxShadow: "0 4px 20px rgba(249,115,22,0.07)" }}>
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "linear-gradient(90deg,#f97316,#eab308)" }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: "#f97316" }}>🔥 THÓI QUEN</h3>
@@ -2767,7 +2906,7 @@ function DashboardView({ showTeam, currentUser, tasks, projects, statCards, open
       </div>
 
       {/* ── Row 2: Week Kanban + Projects ── */}
-      <div className="wf-dash-row2-grid">
+      <div className="wf-dash-row2-grid wf-dash-order-3">
         {/* Week */}
         <div style={{ background: "var(--wf-surface)", borderRadius: 20, padding: 18, border: "1px solid rgba(245,158,11,0.12)", position: "relative", overflow: "hidden", boxShadow: "0 4px 20px rgba(245,158,11,0.07)", display: "flex", flexDirection: "column" }}>
           <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 4, background: "linear-gradient(90deg,#f59e0b,#10b981)" }} />
@@ -3017,7 +3156,7 @@ function DashboardView({ showTeam, currentUser, tasks, projects, statCards, open
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 
@@ -3667,7 +3806,6 @@ function CoursePlannerView({ project, onUpdateProject, onSyncLessonTask }) {
 }
 
 function ProjectWorkspace({ project, projects, tasks, projectTab, setProjectTab, onBack, onCycle, onSetStatus, onOpenDetail, onRemoveTask, onUpdateDesc, onAddAttachments, onRemoveAttachment, onUpdateProject, onSyncLessonTask, openAddModal, onReorder } ) {
-  const [habitDraft, setHabitDraft] = useState("");
   const [descDraft, setDescDraft] = useState(project.desc || "");
   const [sortMode, setSortMode] = useState("deadline");
   const fileInputRef = React.useRef(null);
@@ -3794,6 +3932,15 @@ function GroupProjectsGallery({ projects, friends, onOpen, onAdd, onRemove, onAd
             placeholder="Nhập mã tham gia nhóm khác..." className="wf-input" style={{ flex: 1, border: "1px solid var(--wf-border)", borderRadius: 10, padding: "9px 12px", fontSize: 13, outline: "none" }} />
           <button onClick={() => { if (joinCodeDraft.trim()) { onJoinProjectByCode(joinCodeDraft); setJoinCodeDraft(""); } }} style={{ ...primaryBtnStyle, padding: "9px 16px", display: "flex", alignItems: "center", gap: 5 }}><Link2 size={14} /> Tham gia</button>
         </div>
+        {workspace?.invite_code && (
+          <div style={{ background: "var(--wf-surface)", borderRadius: 16, padding: 12, display: "flex", alignItems: "center", boxShadow: "0 8px 20px rgba(26,32,53,0.06)" }}>
+            <button onClick={copyInviteCode} title="Sao chép mã mời để rủ bạn vào nhóm này"
+              style={{ background: copied ? "#10b981" : "var(--wf-hover-soft)", color: copied ? "#fff" : "var(--wf-text)", border: "none", borderRadius: 10, padding: "9px 16px", display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", transition: "all 0.2s" }}>
+              {copied ? <Check size={14} /> : <Paperclip size={14} />}
+              {copied ? "Đã sao chép!" : `Mời bạn: ${workspace.invite_code}`}
+            </button>
+          </div>
+        )}
       </div>
       
       <div className="wf-grid-3">
@@ -3825,7 +3972,7 @@ function GroupProjectsGallery({ projects, friends, onOpen, onAdd, onRemove, onAd
                 <div style={{ fontSize: 11, color: "var(--wf-text-faint)", marginBottom: 4 }}>Mã tham gia dự án</div>
                 <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 15, letterSpacing: 1 }}>{sp.inviteCode || sp.id.substring(0, 6).toUpperCase()}</div>
               </div>
-              <button onClick={() => { navigator.clipboard?.writeText(sp.inviteCode || sp.id.substring(0, 6).toUpperCase()); }} style={{ background: "var(--wf-hover-soft)", border: "none", borderRadius: 8, cursor: "pointer", padding: 8 }}><Paperclip size={14} /></button>
+              <button onClick={() => { navigator.clipboard?.writeText(sp.inviteCode || sp.id.substring(0, 6).toUpperCase()).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); }} style={{ background: copied ? "#10b981" : "var(--wf-hover-soft)", color: copied ? "#fff" : "inherit", border: "none", borderRadius: 8, cursor: "pointer", padding: 8, transition: "all 0.2s" }}>{copied ? <Check size={14} /> : <Paperclip size={14} />}</button>
             </div>
             
             
@@ -4044,8 +4191,6 @@ function GroupProjectWorkspace({ project, projects, projectTab, setProjectTab, o
   const [showMembersList, setShowMembersList] = useState(false);
   const [editingCell, setEditingCell] = useState({ id: null, field: null, value: "" });
   const [descDraft, setDescDraft] = useState(project.desc || "");
-  const [sortConfig, setSortConfig] = useState(null);
-  const [catDraft, setCatDraft] = useState("");
   
   const projectCategories = project.categories || [];
   const catColors = ["#6366f1", "#10b981", "#f97316", "#ec4899", "#a855f7", "#eab308", "#06b6d4", "#ef4444"];
