@@ -76,7 +76,7 @@ import {
   CheckSquare, FolderLock, Users, FolderKanban, UserCog, LayoutDashboard,
   BarChart3, Settings, Plus, Bell, Clock, X, ChevronRight, ChevronLeft, Trash2, Check,
   Timer, Flame, Award, MessageSquare, Paperclip, Lock, ArrowLeft, ChevronDown, Repeat, CalendarClock, BookOpen, GripVertical, FileText,
-  Play, Pause, RotateCcw, Maximize2, Minimize2, TrendingUp, Calendar, Coffee, Sparkles, Volume2, VolumeX, Star, ChevronUp, PieChart, Zap, Link2, Edit2, User
+  Play, Pause, RotateCcw, Maximize2, Minimize2, TrendingUp, Calendar, Coffee, Sparkles, Volume2, VolumeX, Star, ChevronUp, PieChart, Zap, Link2, Edit2, User, FolderPlus
 } from "lucide-react";
 
 // ---------------- sound engine (synthesized, no assets needed) ----------------
@@ -189,6 +189,19 @@ const GlobalStyles = () => (
     @keyframes wfGradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
     @keyframes wfBounceIn { 0% { transform: scale(0.75); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
     @keyframes wfShimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    @keyframes wfExpand { from { opacity: 0; transform: scaleY(0.85); } to { opacity: 1; transform: scaleY(1); } }
+    @keyframes wfSlideDown { from { opacity: 0; max-height: 0; transform: translateY(-6px); } to { opacity: 1; max-height: 2000px; transform: translateY(0); } }
+    @keyframes wfSlideUp { from { opacity: 1; max-height: 2000px; } to { opacity: 0; max-height: 0; } }
+    .wf-expand-anim { animation: wfExpand 0.22s cubic-bezier(0.34,1.56,0.64,1) both; transform-origin: top; }
+    .wf-row:hover { background: var(--wf-hover-soft) !important; transition: background 0.15s; }
+    .wf-drag-over { border-top: 2.5px solid #6366f1 !important; }
+    .wf-dragging { opacity: 0.45; }
+    .wf-plan-module { transition: box-shadow 0.2s, transform 0.15s; }
+    .wf-plan-module:hover { box-shadow: 0 4px 18px rgba(0,0,0,0.08); }
+    .wf-lesson-row { transition: background 0.12s; }
+    .wf-lesson-row:hover .wf-row-actions { opacity: 1 !important; }
+    .wf-lesson-row:hover .wf-drag-handle { opacity: 0.8 !important; }
+    .wf-row-actions { opacity: 0.4; transition: opacity 0.15s; }
     @keyframes wfSpin { to { transform: rotate(360deg); } }
     .wf-spinner { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(124,58,237,0.15); border-top-color: #7c3aed; animation: wfSpin 0.7s linear infinite; }
     @keyframes wfPulse { 0%,100%{opacity:1;} 50%{opacity:0.65;} }
@@ -2107,7 +2120,7 @@ const removeProject = (id) => {
               {React.createElement(Object.values(navSections).flat().find((i) => i.label === active)?.icon || LayoutDashboard, { size: 20, color: "#6366f1" })}
               <h1 className="wf-heading" style={{ fontSize: 25, fontWeight: 800, margin: 0 }}>{active}</h1>
             </div>
-            <p className="wf-header-date" style={{ color: "var(--wf-text-faint)", fontSize: 13, margin: "4px 0 0 28px" }}>Hôm nay: {(() => {
+            <p className="wf-header-date" style={{ color: "var(--wf-text-muted)", fontSize: 13, margin: "4px 0 0 28px" }}>Hôm nay: {(() => {
               const d = new Date(todayStr);
               const days = ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
               return `${days[d.getDay()]}, ${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
@@ -2119,7 +2132,7 @@ const removeProject = (id) => {
                 onClick={() => { setDarkMode((d) => !d); playSound("click", soundOn); }}
                 title={darkMode ? "Chế độ sáng" : "Chế độ tối"}
                 className="wf-icon-btn"
-                style={{ background: "none", border: "none", cursor: "pointer", color: darkMode ? "#f59e0b" : "var(--wf-text-faint)", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, borderRadius: 8 }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: darkMode ? "#f59e0b" : "var(--wf-text-muted)", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, borderRadius: 8 }}
               >
                 {darkMode ? "☀️" : "🌙"}
               </button>
@@ -2127,7 +2140,7 @@ const removeProject = (id) => {
                 onClick={() => { setSoundOn((s) => !s); playSound("click", !soundOn); }}
                 title={soundOn ? "Tắt âm thanh" : "Bật âm thanh"}
                 className="wf-icon-btn"
-                style={{ background: "none", border: "none", cursor: "pointer", color: soundOn ? "#6366f1" : "var(--wf-text-faint)", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8 }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: soundOn ? "#6366f1" : "var(--wf-text-muted)", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8 }}
               >
                 {soundOn ? "🔊" : "🔇"}
               </button>
@@ -2135,7 +2148,7 @@ const removeProject = (id) => {
                 onClick={() => { dailyRemindOn ? disableDailyReminders() : enableDailyReminders(); playSound("click", soundOn); }}
                 title={dailyRemindOn ? "Tắt nhắc việc hàng ngày" : "Bật nhắc việc hàng ngày (thông báo trên điện thoại)"}
                 className="wf-icon-btn"
-                style={{ background: "none", border: "none", cursor: "pointer", color: dailyRemindOn ? "#10b981" : "var(--wf-text-faint)", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8 }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: dailyRemindOn ? "#10b981" : "var(--wf-text-muted)", width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8 }}
               >
                 {dailyRemindOn ? "🔔" : "🔕"}
               </button>
@@ -2545,7 +2558,7 @@ const removeProject = (id) => {
               <>
                 <button onClick={() => { setNewType("personal"); setForm({ title: "", due: todayStr, owner: "Bạn", project: "Việc lẻ", priority: "Vừa", desc: "", subtasks: [] }); setModalStep("form"); }} style={choiceBtnStyle("#f6f5fe")}>
                   <FolderLock size={18} color="#6366f1" />
-                  <div><div style={{ fontSize: 13.5, fontWeight: 600 }}>Công việc cá nhân</div><div style={{ fontSize: 11.5, color: "var(--wf-text-faint)" }}>Tự động khóa bảo mật</div></div>
+                  <div><div style={{ fontSize: 13.5, fontWeight: 600 }}>Công việc cá nhân</div><div style={{ fontSize: 11.5, color: "var(--wf-text-muted)" }}>Tự động khóa bảo mật</div></div>
                 </button>
                 {showTeam && (
                   <button onClick={() => { 
@@ -2556,7 +2569,7 @@ const removeProject = (id) => {
                     setModalStep("form"); 
                   }} style={choiceBtnStyle("#ecfdf5")}>
                     <Users size={18} color="#10b981" />
-                    <div><div style={{ fontSize: 13.5, fontWeight: 600 }}>Công việc nhóm</div><div style={{ fontSize: 11.5, color: "var(--wf-text-faint)" }}>Chọn dự án và người thực hiện</div></div>
+                    <div><div style={{ fontSize: 13.5, fontWeight: 600 }}>Công việc nhóm</div><div style={{ fontSize: 11.5, color: "var(--wf-text-muted)" }}>Chọn dự án và người thực hiện</div></div>
                   </button>
                 )}
               </>
@@ -2938,7 +2951,7 @@ function DashboardView({ showTeam, currentUser, tasks, projects, statCards, open
                     <div style={{ fontSize: 12, fontWeight: 800, color: isToday ? "#ef4444" : "var(--wf-text-secondary)" }}>{nd.dayName}</div>
                     {dayTasks.length > 0 && <span style={{ fontSize: 10, background: isToday ? "#fee2e2" : "var(--wf-border-soft)", color: isToday ? "#ef4444" : "var(--wf-text-muted)", padding: "1px 6px", borderRadius: 8, fontWeight: 700 }}>{dayTasks.length}</span>}
                   </div>
-                  <div style={{ fontSize: 10, color: "var(--wf-text-faint)", marginTop: -4 }}>{nd.dateStr.slice(5)}</div>
+                  <div style={{ fontSize: 10, color: "var(--wf-text-muted)", marginTop: -4 }}>{nd.dateStr.slice(5)}</div>
                   {dayTasks.slice(0, 3).map(t => (
                     <div key={t.id} draggable
                       onDragStart={e => { setDraggingTask(t); e.dataTransfer.effectAllowed = "move"; try { e.dataTransfer.setData("text/plain", String(t.id)); } catch {} }}
@@ -3073,10 +3086,10 @@ function DashboardView({ showTeam, currentUser, tasks, projects, statCards, open
                       <div style={{ fontSize: 13, fontWeight: 800, color: isToday ? "#ef4444" : "var(--wf-text)" }}>{nd.dayName}</div>
                       <span style={{ fontSize: 11, background: isToday ? "#fee2e2" : "var(--wf-border-soft)", color: isToday ? "#ef4444" : "var(--wf-text-muted)", padding: "2px 8px", borderRadius: 10, fontWeight: 700 }}>{dayTasks.length} việc</span>
                     </div>
-                    <div style={{ fontSize: 11, color: "var(--wf-text-faint)", marginTop: -4, flexShrink: 0 }}>{nd.dateStr.slice(5)}</div>
+                    <div style={{ fontSize: 11, color: "var(--wf-text-muted)", marginTop: -4, flexShrink: 0 }}>{nd.dateStr.slice(5)}</div>
 
                     <div style={{ display: "flex", flexDirection: "column", gap: 8, overflowY: "auto", flex: 1, paddingRight: 2 }} className="wf-scrollbar">
-                      {dayTasks.length === 0 && <div style={{ fontSize: 12, color: "var(--wf-text-faint)", textAlign: "center", padding: "20px 0", fontStyle: "italic" }}>Trống</div>}
+                      {dayTasks.length === 0 && <div style={{ fontSize: 12, color: "var(--wf-text-muted)", textAlign: "center", padding: "20px 0", fontStyle: "italic" }}>Trống</div>}
                       
                       {dayTasks.length > 0 && (() => {
                         const morning = [];
@@ -3112,7 +3125,7 @@ function DashboardView({ showTeam, currentUser, tasks, projects, statCards, open
                             onClick={() => onOpenDetail(t)}
                             style={{ background: "var(--wf-surface)", borderRadius: 10, padding: "10px 12px", fontSize: 12.5, cursor: "grab", opacity: draggingTask?.id === t.id ? 0.45 : 1, boxShadow: "0 4px 12px rgba(0,0,0,0.05)", borderLeft: `3.5px solid ${t.priority === "Gấp" ? "#ec4899" : t.status === "done" ? "#10b981" : "#8b5cf6"}`, display: "flex", flexDirection: "column", gap: 4, transition: "transform 0.15s ease", textDecoration: t.status === "done" ? "line-through" : "none" }}>
                             <div style={{ fontWeight: 700, color: t.status === "done" ? "var(--wf-text-muted)" : "var(--wf-text)", lineHeight: 1.3 }}>
-                              <span style={{ fontSize: 11.5, fontWeight: 800, color: "var(--wf-text-faint)", marginRight: 5 }}>{idxGroup + 1}.</span>
+                              <span style={{ fontSize: 11.5, fontWeight: 800, color: "var(--wf-text-muted)", marginRight: 5 }}>{idxGroup + 1}.</span>
                               {t.title}
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10.5, color: "var(--wf-text-muted)" }}>
@@ -3128,19 +3141,19 @@ function DashboardView({ showTeam, currentUser, tasks, projects, statCards, open
                               <span style={{ fontSize: 13 }}>🌅</span> Sáng (0:00 - 11:59)
                             </div>
                             {morning.map((t, i) => renderTask(t, i))}
-                            {morning.length === 0 && <div style={{ fontSize: 10, color: "var(--wf-text-faint)", fontStyle: "italic", textAlign: "center", padding: "4px 0" }}>-</div>}
+                            {morning.length === 0 && <div style={{ fontSize: 10, color: "var(--wf-text-muted)", fontStyle: "italic", textAlign: "center", padding: "4px 0" }}>-</div>}
 
                             <div style={{ fontSize: 11, fontWeight: 800, color: "var(--wf-text-muted)", borderBottom: "1px solid var(--wf-border-soft)", paddingBottom: 4, marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
                               <span style={{ fontSize: 13 }}>☀️</span> Chiều (12:00 - 17:59)
                             </div>
                             {afternoon.map((t, i) => renderTask(t, i))}
-                            {afternoon.length === 0 && <div style={{ fontSize: 10, color: "var(--wf-text-faint)", fontStyle: "italic", textAlign: "center", padding: "4px 0" }}>-</div>}
+                            {afternoon.length === 0 && <div style={{ fontSize: 10, color: "var(--wf-text-muted)", fontStyle: "italic", textAlign: "center", padding: "4px 0" }}>-</div>}
 
                             <div style={{ fontSize: 11, fontWeight: 800, color: "var(--wf-text-muted)", borderBottom: "1px solid var(--wf-border-soft)", paddingBottom: 4, marginTop: 8, display: "flex", alignItems: "center", gap: 6 }}>
                               <span style={{ fontSize: 13 }}>🌙</span> Tối (18:00 - 23:59)
                             </div>
                             {evening.map((t, i) => renderTask(t, i))}
-                            {evening.length === 0 && <div style={{ fontSize: 10, color: "var(--wf-text-faint)", fontStyle: "italic", textAlign: "center", padding: "4px 0" }}>-</div>}
+                            {evening.length === 0 && <div style={{ fontSize: 10, color: "var(--wf-text-muted)", fontStyle: "italic", textAlign: "center", padding: "4px 0" }}>-</div>}
                           </>
                         );
                       })()}
@@ -3168,7 +3181,7 @@ function MiniList({ title, color, bg, items, onOpenDetail, onToggleTask }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           {items.map((t, idx) => (
             <div key={t.id} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 11.5, fontWeight: 800, color: "var(--wf-text-faint)", minWidth: 16 }}>{idx + 1}.</span>
+              <span style={{ fontSize: 11.5, fontWeight: 800, color: "var(--wf-text-muted)", minWidth: 16 }}>{idx + 1}.</span>
               <div onClick={(e) => { e.stopPropagation(); onToggleTask && onToggleTask(t.id); }} style={{ ...checkBtnStyle(t.status === "done"), width: 16, height: 16, borderRadius: 5 }}>{t.status === "done" && <Check size={10} color="#fff" />}</div>
               <span onClick={() => onOpenDetail(t)} style={{ flex: 1, fontSize: 12.5, color: "var(--wf-text-secondary)", cursor: "pointer", lineHeight: 1.4 }}>{t.title}</span>
             </div>
@@ -3332,7 +3345,7 @@ function TaskListView({ tasks, projects, onToggle, onCycle, onRemove, onOpenDeta
           {showSubtasks && (
             <div style={{ marginLeft: 34, marginTop: 8, background: "var(--wf-hover-soft)", borderRadius: 10, padding: "8px 10px" }}>
               {t.subtasks?.length > 0 && (
-                <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--wf-text-faint)", marginBottom: 4 }}>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: "var(--wf-text-muted)", marginBottom: 4 }}>
                   Việc nhỏ ({t.subtasks.filter((s) => s.done).length}/{t.subtasks.length})
                 </div>
               )}
@@ -3391,10 +3404,10 @@ function KanbanView({ tasks, onCycle, onSetStatus, onRemove, onOpenDetail }) {
               style={{ background: "var(--wf-hover-soft)", borderRadius: 10, padding: 10, marginBottom: 8, cursor: "grab", opacity: draggingId === t.id ? 0.4 : 1 }}
               onClick={() => onOpenDetail(t)}>
               <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
-                <GripVertical size={13} style={{ color: "var(--wf-text-faint)", marginTop: 2, flexShrink: 0 }} />
+                <GripVertical size={13} style={{ color: "var(--wf-text-muted)", marginTop: 2, flexShrink: 0 }} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>
-                    <span style={{ fontSize: 11.5, fontWeight: 800, color: "var(--wf-text-faint)", marginRight: 5 }}>{idx + 1}.</span>
+                    <span style={{ fontSize: 11.5, fontWeight: 800, color: "var(--wf-text-muted)", marginRight: 5 }}>{idx + 1}.</span>
                     {t.title}
                   </div>
                   <div style={{ fontSize: 10.5, color: "var(--wf-text-muted)", marginBottom: 6 }}>Giao: {t.owner} · {t.due}</div>
@@ -3408,7 +3421,7 @@ function KanbanView({ tasks, onCycle, onSetStatus, onRemove, onOpenDetail }) {
             </div>
           ))}
           {tasks.filter((t) => t.status === c).length === 0 && (
-            <div style={{ fontSize: 11, color: "var(--wf-text-faint)", textAlign: "center", padding: "14px 0", border: "1.5px dashed var(--wf-border-soft)", borderRadius: 10 }}>Kéo thẻ vào đây</div>
+            <div style={{ fontSize: 11, color: "var(--wf-text-muted)", textAlign: "center", padding: "14px 0", border: "1.5px dashed var(--wf-border-soft)", borderRadius: 10 }}>Kéo thẻ vào đây</div>
         )}
         </div>
       ))}
@@ -3466,58 +3479,21 @@ function PersonalProjectsGallery({ projects, onOpen, onAdd, onRemove, onConvertP
   );
 }
 
-function CoursePlannerView({ project, onUpdateProject, onSyncLessonTask }) {
-  const planName = project.name;
-  const modules = project.plans || [];
-
-  const [newModuleDraft, setNewModuleDraft] = useState("");
-  const [newModuleDuration, setNewModuleDuration] = useState("1 ngày");
-  const [lessonDrafts, setLessonDrafts] = useState({});
-  const [isFullscreen, setIsFullscreen] = useState(false);
-
-  const modColors  = ["#6366f1","#10b981","#f97316","#ec4899","#a855f7","#eab308","#06b6d4","#ef4444"];
-  const modBgLight = ["rgba(99,102,241,0.07)","rgba(16,185,129,0.07)","rgba(249,115,22,0.07)","rgba(236,72,153,0.07)","rgba(168,85,247,0.07)","rgba(234,179,8,0.07)","rgba(6,182,212,0.07)","rgba(239,68,68,0.07)"];
-
-  const updateNodeRec = (nodes, id, updates) => {
-    return nodes.map(n => {
-      if (n.id === id) return { ...n, ...updates };
-      if (n.items) return { ...n, items: updateNodeRec(n.items, id, updates) };
-      return n;
-    });
+    const parseMD = (text) => {
+    if (!text) return "";
+    return text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/__(.*?)__/g, '<u>$1</u>')
+      .replace(/<u>(.*?)<\/u>/g, '<u>$1</u>')
+      .replace(/~~(.*?)~~/g, '<del>$1</del>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/`(.*?)`/g, '<code style="background:var(--wf-hover-soft);padding:2px 4px;border-radius:4px;color:#6366f1;font-size:11.5px">$1</code>')
+      .replace(/^-\s+(.*)/, '• $1')
+      .replace(/^>\s+(.*)/, '<span style="border-left:2px solid #6366f1;padding-left:6px;color:var(--wf-text-secondary);font-style:italic">$1</span>');
   };
 
-  const removeNodeRec = (nodes, id) => {
-    return nodes.filter(n => n.id !== id).map(n => {
-      if (n.items) return { ...n, items: removeNodeRec(n.items, id) };
-      return n;
-    });
-  };
 
-  const addChildRec = (nodes, parentId, newChild) => {
-    return nodes.map(n => {
-      if (n.id === parentId) return { ...n, items: [...(n.items || []), newChild] };
-      if (n.items) return { ...n, items: addChildRec(n.items, parentId, newChild) };
-      return n;
-    });
-  };
-
-  const findNodeRec = (nodes, id) => {
-    for (const n of nodes) {
-      if (n.id === id) return n;
-      if (n.items) {
-        const found = findNodeRec(n.items, id);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
-
-  const countLessons = (nodes) => { let t = 0; let d = 0; for (const n of nodes) { if (n.items && n.items.length > 0) { const [subT, subD] = countLessons(n.items); t += subT; d += subD; } else if (n.text) { t += 1; if (n.done) d += 1; } } return [t, d]; };
-  const [totalLessons, doneLessons] = countLessons(modules);
-
-  const updateModules = (newMods) => onUpdateProject({ plans: newMods });
-
-  const applyFormat = (inputId, value, setValue, prefix, suffix = prefix) => {
+const applyFormat = (inputId, value, setValue, prefix, suffix = prefix) => {
     const el = document.getElementById(inputId);
     if (!el) {
       setValue(value + prefix + suffix);
@@ -3551,18 +3527,378 @@ function CoursePlannerView({ project, onUpdateProject, onSyncLessonTask }) {
     </div>
   );
 
-  const parseMD = (text) => {
-    if (!text) return "";
-    return text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/__(.*?)__/g, '<u>$1</u>')
-      .replace(/<u>(.*?)<\/u>/g, '<u>$1</u>')
-      .replace(/~~(.*?)~~/g, '<del>$1</del>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/`(.*?)`/g, '<code style="background:var(--wf-hover-soft);padding:2px 4px;border-radius:4px;color:#6366f1;font-size:11.5px">$1</code>')
-      .replace(/^-\s+(.*)/, '• $1')
-      .replace(/^>\s+(.*)/, '<span style="border-left:2px solid #6366f1;padding-left:6px;color:var(--wf-text-secondary);font-style:italic">$1</span>');
+
+  const RecursiveLessonNode = ({ node, level, indexPrefix, color, bgLight, onToggle, onRemove, onSetDate, onAddChild, onAddChildModule, onEditNode, onReorder, parentId, itemIndex, dragSource, dragTarget, setDragSource, setDragTarget, onGlobalDrop }) => {
+    const items = node.items || [];
+    const [draft, setDraft] = useState("");
+    const [expanded, setExpanded] = useState(true);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editValue, setEditValue] = useState("");
+    const [isAddingTask, setIsAddingTask] = useState(false);
+    const [isAddingSubModule, setIsAddingSubModule] = useState(false);
+    const [subModuleDraft, setSubModuleDraft] = useState("");
+
+    const handleSaveEdit = () => {
+      if (editValue.trim() && editValue !== (node.name || node.text)) {
+        onEditNode(node.id, { [node.name ? "name" : "text"]: editValue.trim() });
+      }
+      setIsEditing(false);
+    };
+
+    const handleChildDragStart = (e, childId, idx) => {
+      e.stopPropagation();
+      setDragSource({ id: childId, parentId: node.id });
+    };
+    const handleChildDragOver = (e, idx) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragTarget({ parentId: node.id, index: idx });
+    };
+    const handleChildDrop = (e, idx) => {
+      e.stopPropagation();
+      onGlobalDrop(node.id, idx);
+    };
+    const handleChildDragEnd = () => { setDragSource(null); setDragTarget(null); };
+
+    if (node.name) {
+      // Is Sub-Module — rendered as table row (sub-module label left, lessons right)
+      const subModuleWidth = Math.max(110, 155 - level * 18);
+      return (
+        <div style={{ display: "flex", borderBottom: "1px solid var(--wf-border-soft)" }}>
+          {/* Sub-module label column */}
+          <div style={{
+            width: subModuleWidth, flexShrink: 0,
+            background: `linear-gradient(160deg, ${color}18 0%, ${color}08 100%)`,
+            borderRight: `3px solid ${color}`,
+            display: "flex", flexDirection: "column",
+            justifyContent: "flex-start",
+            padding: "10px 8px 10px " + (8 + level * 14) + "px",
+            position: "relative",
+            minHeight: 40
+          }}>
+            {level > 0 && <div style={{ position: "absolute", left: 2, top: 0, bottom: 0, width: 3, background: color + "40", borderRadius: 2 }} />}
+            {isEditing ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <input id={`edit-node-${node.id}`} value={editValue} onChange={e => setEditValue(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSaveEdit()} autoFocus style={{ width: "100%", border: "1px solid var(--wf-border)", background: "var(--wf-surface)", fontSize: 11, outline: "none", color: "var(--wf-text)", padding: "3px 6px", borderRadius: 4, fontFamily: "inherit", boxSizing: "border-box" }} />
+                <div style={{ display: 'flex', gap: 3 }}>
+                  <button onClick={handleSaveEdit} style={{ background: color, border: "none", color: "#fff", padding: "2px 6px", borderRadius: 3, cursor: "pointer", fontSize: 10, fontWeight: "bold" }}>OK</button>
+                  <button onClick={() => setIsEditing(false)} style={{ background: "transparent", border: "1px solid var(--wf-border)", color: "var(--wf-text)", padding: "2px 6px", borderRadius: 3, cursor: "pointer", fontSize: 10 }}>Hủy</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 4, background: color+"1a", borderRadius: 20, padding: "2px 8px 2px 5px", width: "fit-content", marginBottom: 3 }}>
+                  <FolderPlus size={9} color={color} />
+                  <span style={{ fontSize: 11, fontWeight: 700, color: color, marginRight: 4 }}>{indexPrefix}</span>
+                  <span dangerouslySetInnerHTML={{ __html: parseMD(node.name) }} style={{ fontSize: 11, fontWeight: 700, color: color, lineHeight: 1.3 }}></span>
+                </div>
+                {/* Action buttons */}
+                <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 2 }}>
+                  {items.length > 0 && (
+                    <button onClick={() => setExpanded(!expanded)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-border)", padding: 2, transition: "transform 0.2s" }} title={expanded ? "Thu gọn" : "Mở rộng"}>
+                      {expanded ? <ChevronUp size={11}/> : <ChevronDown size={11}/>}
+                    </button>
+                  )}
+                  <button onClick={() => { setIsEditing(true); setEditValue(node.name); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-border)", padding: 2 }} title="Sửa tên"><Edit2 size={10}/></button>
+                  <button onClick={() => { setIsAddingTask(true); setExpanded(true); }} style={{ background: "none", border: "none", cursor: "pointer", color: color, padding: 2 }} title="Thêm bài học"><Plus size={11} /></button>
+                  <button onClick={() => { setIsAddingSubModule(true); setExpanded(true); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-border)", padding: 2 }} title="Thêm module con"><FolderPlus size={10} /></button>
+                  <button onClick={() => onRemove(node.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-border)", padding: 2 }} title="Xóa"><Trash2 size={10} /></button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right: lessons & children */}
+          <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+            {expanded && items.map((child, childIdx) => (
+              <div key={child.id}
+                draggable={!child.name}
+                onDragStart={(e) => handleChildDragStart(e, child.id, childIdx)}
+                onDragOver={(e) => handleChildDragOver(e, childIdx)}
+                onDrop={(e) => handleChildDrop(e, childIdx)}
+                onDragEnd={handleChildDragEnd}
+                style={{
+                  opacity: dragSource && dragSource.id === child.id ? 0.4 : 1,
+                  borderTop: dragTarget && dragTarget.parentId === node.id && dragTarget.index === childIdx && (!dragSource || dragSource.id !== child.id) ? `2px solid ${color}` : "none",
+                  borderBottom: false ? `2px solid ${color}` : "none",
+                  transition: "opacity 0.15s"
+                }}>
+                <RecursiveLessonNode node={child} indexPrefix={indexPrefix ? `${indexPrefix}.${childIdx + 1}` : `${childIdx + 1}`} dragSource={dragSource} dragTarget={dragTarget} setDragSource={setDragSource} setDragTarget={setDragTarget} onGlobalDrop={onGlobalDrop} level={level + 1} color={color} bgLight={bgLight} onToggle={onToggle} onRemove={onRemove} onSetDate={onSetDate} onAddChild={onAddChild} onAddChildModule={onAddChildModule} onEditNode={onEditNode} onReorder={onReorder} parentId={node.id} itemIndex={childIdx} />
+              </div>
+            ))}
+            {expanded && (isAddingTask || isAddingSubModule) && (
+              <div style={{ padding: "6px 14px", background: "var(--wf-hover-soft)", borderTop: "1px solid var(--wf-border-soft)" }}>
+                {isAddingTask ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 26 }}>
+                    <input id={`add-task-${node.id}`} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && draft.trim()) { onAddChild(node.id, draft.trim()); setDraft(""); setIsAddingTask(false); } }} autoFocus placeholder="+ Thêm bài học..." style={{ flex: 1, border: "1px solid var(--wf-border)", background: "var(--wf-surface)", fontSize: 12.5, outline: "none", color: "var(--wf-text)", fontFamily: "inherit", padding: "4px 8px", borderRadius: 4 }} />
+                    <FormatButtons inputId={`add-task-${node.id}`} value={draft} setValue={setDraft} />
+                    <button onClick={() => { if (draft.trim()) { onAddChild(node.id, draft.trim()); setDraft(""); } setIsAddingTask(false); }} style={{ background: color, border: "none", color: "#fff", padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontWeight: "bold" }}>OK</button>
+                    <button onClick={() => { setIsAddingTask(false); setDraft(""); }} style={{ background: "transparent", border: "1px solid var(--wf-border)", color: "var(--wf-text)", padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 11 }}>Hủy</button>
+                  </div>
+                ) : isAddingSubModule ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input value={subModuleDraft} onChange={e => setSubModuleDraft(e.target.value)} onKeyDown={e => { if(e.key === 'Enter' && subModuleDraft.trim()) { onAddChildModule(node.id, subModuleDraft.trim()); setSubModuleDraft(""); setIsAddingSubModule(false); } }} autoFocus placeholder="Tên module con..." style={{ border: "1px solid var(--wf-border)", background: "var(--wf-surface)", fontSize: 11, outline: "none", color: "var(--wf-text)", padding: "4px 8px", borderRadius: 4, fontFamily: "inherit", width: 120 }} />
+                    <button onClick={() => { if(subModuleDraft.trim()) { onAddChildModule(node.id, subModuleDraft.trim()); setSubModuleDraft(""); } setIsAddingSubModule(false); }} style={{ background: color, border: "none", color: "#fff", padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontWeight: "bold" }}>OK</button>
+                    <button onClick={() => { setIsAddingSubModule(false); setSubModuleDraft(""); }} style={{ background: "transparent", border: "1px solid var(--wf-border)", color: "var(--wf-text)", padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 11 }}>Hủy</button>
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Is Lesson
+    return (
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        <div className="wf-lesson-row" style={{ display: "flex", alignItems: "center", gap: 0,
+          padding: `0 12px 0 ${12 + level*22}px`, 
+          minHeight: 42, 
+          background: node.done ? "var(--wf-page-bg)" : "var(--wf-surface)",
+          position: "relative", 
+          borderBottom: "1px solid var(--wf-border-soft)",
+          borderLeft: level > 0 ? `3px solid ${color}30` : "none",
+          transition: "background 0.15s ease" }}>
+          
+          <div className="wf-drag-handle" style={{ width: 14, cursor: "grab", color: "var(--wf-text-muted)", opacity: 0.3, display: "flex", alignItems: "center", justifyContent: "center", marginRight: 4, transition: "opacity 0.2s" }}>
+            <GripVertical size={13} />
+          </div>
+          
+          <div onClick={() => onToggle(node.id)}
+            style={{ width: 17, height: 17, borderRadius: 4, border: `1.5px solid ${node.done ? color : "var(--wf-border)"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: node.done ? color : "transparent", flexShrink: 0, marginRight: 10, transition: "all 0.15s ease" }}>
+            {node.done && <Check size={10} color="#fff" />}
+          </div>
+          {isEditing ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, padding: "4px 0" }}>
+              <input id={`edit-node-${node.id}`} value={editValue} onChange={e => setEditValue(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSaveEdit()} autoFocus style={{ flex: 1, border: "1px solid var(--wf-border)", background: "var(--wf-surface)", fontSize: 12.5, outline: "none", color: "var(--wf-text)", padding: "4px 8px", borderRadius: 4, fontFamily: "inherit" }} />
+              <FormatButtons inputId={`edit-node-${node.id}`} value={editValue} setValue={setEditValue} />
+              <button onClick={handleSaveEdit} style={{ background: color, border: "none", color: "#fff", padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontWeight: "bold" }}>OK</button>
+              <button onClick={() => setIsEditing(false)} style={{ background: "transparent", border: "1px solid var(--wf-border)", color: "var(--wf-text)", padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 11 }}>Hủy</button>
+            </div>
+          ) : (
+            <>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--wf-text-muted)", marginRight: 6, flexShrink: 0 }}>{indexPrefix}</span>
+              <span dangerouslySetInnerHTML={{ __html: parseMD(node.text) }} style={{ flex: 1, fontSize: 13, fontWeight: 500, color: node.done ? "var(--wf-text-muted)" : "var(--wf-text)", textDecoration: node.done ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", transition: "color 0.15s" }}>
+              </span>
+              <button onClick={() => { setIsEditing(true); setEditValue(node.text); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-text-muted)", padding: 4, opacity: 0.8 }} title="Sửa nội dung">
+                <Edit2 size={13} />
+              </button>
+            </>
+          )}
+          {!isEditing && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8, flexShrink: 0 }}>
+              {items.length > 0 && (
+                <button onClick={() => setExpanded(!expanded)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-text-muted)", padding: 4, opacity: 0.8, transition: "transform 0.2s" }} title={expanded ? "Thu gọn" : "Mở rộng"}>
+                  {expanded ? <ChevronUp size={13}/> : <ChevronDown size={13}/>}
+                </button>
+              )}
+              <button onClick={() => { setIsAddingTask(true); setExpanded(true); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-text-muted)", padding: 4, opacity: 0.8 }} title="Thêm việc con">
+                <Plus size={13} />
+              </button>
+              <input type="date" value={node.date || ""} onChange={e => onSetDate(node.id, e.target.value)}
+                style={{ border: "none", background: "transparent", fontSize: 11.5, color: node.date ? "var(--wf-text-secondary)" : "var(--wf-text-muted)", outline: "none", width: 118, cursor: "pointer", fontFamily: "inherit" }} />
+              <button onClick={() => onRemove(node.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-text-muted)", padding: 4, opacity: 0.8 }}>
+                <Trash2 size={13} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {expanded && items.length > 0 && (
+          <div className="wf-expand-anim" style={{ display: "flex", flexDirection: "column" }}>
+            {items.map((child, childIdx) => (
+              <div key={child.id}
+                draggable
+                onDragStart={(e) => handleChildDragStart(e, child.id, childIdx)}
+                onDragOver={(e) => handleChildDragOver(e, childIdx)}
+                onDrop={(e) => handleChildDrop(e, childIdx)}
+                onDragEnd={handleChildDragEnd}
+                style={{
+                  opacity: dragSource && dragSource.id === child.id ? 0.4 : 1,
+                  borderTop: dragTarget && dragTarget.parentId === node.id && dragTarget.index === childIdx && (!dragSource || dragSource.id !== child.id) ? `2px solid ${color}` : "none",
+                  borderBottom: false ? `2px solid ${color}` : "none",
+                  transition: "opacity 0.15s"
+                }}>
+                <RecursiveLessonNode node={child} indexPrefix={indexPrefix ? `${indexPrefix}.${childIdx + 1}` : `${childIdx + 1}`} dragSource={dragSource} dragTarget={dragTarget} setDragSource={setDragSource} setDragTarget={setDragTarget} onGlobalDrop={onGlobalDrop} level={level + 1} color={color} bgLight={bgLight} onToggle={onToggle} onRemove={onRemove} onSetDate={onSetDate} onAddChild={onAddChild} onAddChildModule={onAddChildModule} onEditNode={onEditNode} onReorder={onReorder} parentId={node.id} itemIndex={childIdx} />
+              </div>
+            ))}
+          </div>
+        )}
+        
+        {expanded && isAddingTask && (
+          <div style={{ padding: `6px 14px 6px ${14 + (level+1)*20}px`, background: "var(--wf-hover-soft)", position: "relative", borderBottom: "1px solid var(--wf-border-soft)" }}>
+            <div style={{ position: "absolute", left: 14 + level*20 + 8, top: 0, bottom: 0, width: 1, background: "var(--wf-border-soft)" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 26 }}>
+              <input id={`add-task-${node.id}`} value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && draft.trim()) { onAddChild(node.id, draft.trim()); setDraft(""); setIsAddingTask(false); } }} autoFocus placeholder="+ Thêm việc con cho bài học..." style={{ flex: 1, border: "1px solid var(--wf-border)", background: "var(--wf-surface)", fontSize: 12.5, outline: "none", color: "var(--wf-text)", fontFamily: "inherit", padding: "4px 8px", borderRadius: 4 }} />
+              <FormatButtons inputId={`add-task-${node.id}`} value={draft} setValue={setDraft} />
+              <button onClick={() => { if (draft.trim()) { onAddChild(node.id, draft.trim()); setDraft(""); } setIsAddingTask(false); }} style={{ background: color, border: "none", color: "#fff", padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontWeight: "bold" }}>OK</button>
+              <button onClick={() => { setIsAddingTask(false); setDraft(""); }} style={{ background: "transparent", border: "1px solid var(--wf-border)", color: "var(--wf-text)", padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 11 }}>Hủy</button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
+
+
+
+
+function CoursePlannerView({ project, onUpdateProject, onSyncLessonTask }) {
+  const planName = project.name;
+  const modules = project.plans || [];
+
+  const [newModuleDraft, setNewModuleDraft] = useState("");
+  const [newModuleDuration, setNewModuleDuration] = useState("1 ngày");
+  const [lessonDrafts, setLessonDrafts] = useState({});
+  const [editingRootModules, setEditingRootModules] = useState({});
+  const [rootModuleDrafts, setRootModuleDrafts] = useState({});
+  const [addingRootSubModules, setAddingRootSubModules] = useState({});
+  const [rootSubModuleDrafts, setRootSubModuleDrafts] = useState({});
+  const [addingRootLessons, setAddingRootLessons] = useState({});
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [dragIdx, setDragIdx] = React.useState(null);
+  const [dragOverIdx, setDragOverIdx] = React.useState(null);
+  const [dragSource, setDragSource] = React.useState(null);
+  const [dragTarget, setDragTarget] = React.useState(null);
+
+  const updateNodeRec = (nodes, id, updates) => {
+    return nodes.map(n => {
+      if (n.id === id) return { ...n, ...updates };
+      if (n.items) return { ...n, items: updateNodeRec(n.items, id, updates) };
+      return n;
+    });
+  };
+
+  const removeNodeRec = (nodes, id) => {
+    return nodes.filter(n => n.id !== id).map(n => {
+      if (n.items) return { ...n, items: removeNodeRec(n.items, id) };
+      return n;
+    });
+  };
+
+  const insertChildRec = (nodes, parentId, index, newChild) => {
+    return nodes.map(n => {
+      if (n.id === parentId) {
+        const its = [...(n.items || [])];
+        its.splice(index, 0, newChild);
+        return { ...n, items: its };
+      }
+      if (n.items) return { ...n, items: insertChildRec(n.items, parentId, index, newChild) };
+      return n;
+    });
+  };
+
+  const onGlobalDrop = (targetParentId, targetIdx) => {
+    if (!dragSource || !dragTarget) return;
+    const { id: sourceId, parentId: sourceParentId } = dragSource;
+    
+    // If same parent, just use reorder (or do remove+insert, which is safer)
+    const nodeToMove = findNodeRec(modules, sourceId);
+    if (!nodeToMove) return;
+    
+    let newModules = modules;
+    
+    // If dropping into the exact same parent, we need to adjust targetIdx if fromIdx < toIdx
+    // To keep it simple, we use the splice logic
+    if (sourceParentId === targetParentId) {
+       // Need to find fromIdx
+       let fromIdx = -1;
+       const pNode = findNodeRec(modules, sourceParentId) || modules.find(m => m.id === sourceParentId);
+       if (pNode && pNode.items) fromIdx = pNode.items.findIndex(i => i.id === sourceId);
+       
+       if (fromIdx !== -1 && fromIdx !== targetIdx) {
+           newModules = reorderChildrenRec(modules, sourceParentId, fromIdx, targetIdx);
+       }
+    } else {
+       // Cross-parent drop
+       newModules = removeNodeRec(newModules, sourceId);
+       
+       // For root modules, targetParentId is a top-level module
+       const topLevelIdx = newModules.findIndex(m => m.id === targetParentId);
+       if (topLevelIdx >= 0) {
+           const arr = [...newModules];
+           const its = [...(arr[topLevelIdx].items || [])];
+           its.splice(targetIdx, 0, nodeToMove);
+           arr[topLevelIdx] = { ...arr[topLevelIdx], items: its };
+           newModules = arr;
+       } else {
+           newModules = insertChildRec(newModules, targetParentId, targetIdx, nodeToMove);
+       }
+    }
+    
+    updateModules(newModules);
+    setDragSource(null);
+    setDragTarget(null);
+  };
+
+  const reorderChildrenRec = (nodes, parentId, fromIdx, toIdx) => {
+    return nodes.map(n => {
+      if (n.id === parentId) {
+        const its = [...(n.items || [])];
+        const [moved] = its.splice(fromIdx, 1);
+        its.splice(toIdx, 0, moved);
+        return { ...n, items: its };
+      }
+      if (n.items) return { ...n, items: reorderChildrenRec(n.items, parentId, fromIdx, toIdx) };
+      return n;
+    });
+  };
+
+  const addChildRec = (nodes, parentId, newChild) => {
+    return nodes.map(n => {
+      if (n.id === parentId) return { ...n, items: [...(n.items || []), newChild] };
+      if (n.items) return { ...n, items: addChildRec(n.items, parentId, newChild) };
+      return n;
+    });
+  };
+
+  const findNodeRec = (nodes, id) => {
+    for (const n of nodes) {
+      if (n.id === id) return n;
+      if (n.items) {
+        const found = findNodeRec(n.items, id);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const countLessons = (nodes) => { let t = 0; let d = 0; for (const n of nodes) { if (n.items && n.items.length > 0) { const [subT, subD] = countLessons(n.items); t += subT; d += subD; } else if (n.text) { t += 1; if (n.done) d += 1; } } return [t, d]; };
+  const [totalLessons, doneLessons] = countLessons(modules);
+
+  const updateModules = (newMods) => onUpdateProject({ plans: newMods });
+
+  const onDragStart = (idx) => setDragIdx(idx);
+  const onDragOver = (e, idx) => { e.preventDefault(); setDragOverIdx(idx); };
+  const onDrop = (idx) => {
+    if (dragIdx === null || dragIdx === idx) { setDragIdx(null); setDragOverIdx(null); return; }
+    const arr = [...modules];
+    const [moved] = arr.splice(dragIdx, 1);
+    arr.splice(idx, 0, moved);
+    updateModules(arr);
+    setDragIdx(null);
+    setDragOverIdx(null);
+  };
+  const onDragEnd = () => { setDragIdx(null); setDragOverIdx(null); };
+
+  const onReorderChildren = (parentId, fromIdx, toIdx) => {
+    if (fromIdx === toIdx) return;
+    // For root module level: parent is the module itself
+    const topLevel = modules.findIndex(m => m.id === parentId);
+    if (topLevel >= 0) {
+      const arr = [...modules];
+      const its = [...(arr[topLevel].items || [])];
+      const [moved] = its.splice(fromIdx, 1);
+      its.splice(toIdx, 0, moved);
+      arr[topLevel] = { ...arr[topLevel], items: its };
+      updateModules(arr);
+    } else {
+      updateModules(reorderChildrenRec(modules, parentId, fromIdx, toIdx));
+    }
+  };
+
+
 
 
   const onAddModule = () => {
@@ -3603,97 +3939,6 @@ function CoursePlannerView({ project, onUpdateProject, onSyncLessonTask }) {
   };
 
 
-  const RecursiveLessonNode = ({ node, level, color, bgLight, onToggle, onRemove, onSetDate, onAddChild, onAddChildModule, onEditNode }) => {
-    const items = node.items || [];
-    const [draft, setDraft] = useState("");
-    const [expanded, setExpanded] = useState(true);
-
-    if (node.name) {
-      // Is Sub-Module
-      return (
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <div className="wf-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: `8px 14px 8px ${14 + level * 20}px`, background: bgLight, borderBottom: "1px solid var(--wf-border-soft)", position: "relative" }}>
-            {level > 0 && <div style={{ position: "absolute", left: 14 + (level-1)*20 + 8, top: 0, bottom: 0, width: 1, background: "var(--wf-border-soft)" }} />}
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span dangerouslySetInnerHTML={{ __html: parseMD(node.name) }} style={{ fontSize: 12.5, fontWeight: 700, color: color }}></span>
-              <button onClick={() => { const newName = prompt("Tên module:", node.name); if(newName) onEditNode(node.id, {name: newName}); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-border)", padding: 2 }} title="Sửa tên"><Edit2 size={12}/></button>
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <button onClick={() => setExpanded(!expanded)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-border)", padding: 4 }}>
-                {expanded ? <ChevronUp size={13}/> : <ChevronDown size={13}/>}
-              </button>
-              <button onClick={() => onRemove(node.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-border)", padding: 4 }}><Trash2 size={13} /></button>
-            </div>
-          </div>
-          {expanded && (
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              {items.map((child) => (
-                <RecursiveLessonNode key={child.id} node={child} level={level + 1} color={color} bgLight={bgLight} onToggle={onToggle} onRemove={onRemove} onSetDate={onSetDate} onAddChild={onAddChild} onAddChildModule={onAddChildModule} onEditNode={onEditNode} />
-              ))}
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: `6px 14px 6px ${14 + (level+1)*20}px`, background: "var(--wf-hover-soft)", minHeight: 38, position: "relative", borderBottom: "1px solid var(--wf-border-soft)" }}>
-                <div style={{ position: "absolute", left: 14 + level*20 + 8, top: 0, bottom: 0, width: 1, background: "var(--wf-border-soft)" }} />
-                <input value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={e => { if (e.key === "Enter" && draft.trim()) { onAddChild(node.id, draft.trim()); setDraft(""); } }} placeholder={"+ Thêm bài học..."} style={{ flex: 1, border: "none", background: "transparent", fontSize: 12.5, outline: "none", color: "var(--wf-text-muted)", fontFamily: "inherit" }} />
-                <button onClick={() => { const name = prompt("Tên module con:"); if(name) onAddChildModule(node.id, name); }} style={{ background: "none", border: "none", cursor: "pointer", color: color, fontSize: 11, fontWeight: 700 }}>+ Module con</button>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    // Is Lesson
-    return (
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        <div className="wf-row" style={{ display: "flex", alignItems: "center", gap: 0, padding: `0 14px 0 ${14 + level * 20}px`, minHeight: 42, background: "var(--wf-surface)", position: "relative", borderBottom: "1px solid var(--wf-border-soft)" }}>
-          {level > 0 && <div style={{ position: "absolute", left: 14 + (level-1)*20 + 8, top: 0, bottom: 0, width: 1, background: "var(--wf-border-soft)" }} />}
-          
-          <div onClick={() => onToggle(node.id)}
-            style={{ width: 17, height: 17, borderRadius: 4, border: `1.5px solid ${node.done ? color : "var(--wf-border)"}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", background: node.done ? color : "transparent", flexShrink: 0, marginRight: 10, transition: "all 0.15s ease" }}>
-            {node.done && <Check size={10} color="#fff" />}
-          </div>
-          <span dangerouslySetInnerHTML={{ __html: parseMD(node.text) }} style={{ flex: 1, fontSize: 13, fontWeight: 500, color: node.done ? "var(--wf-text-muted)" : "var(--wf-text)", textDecoration: node.done ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", transition: "color 0.15s" }}>
-          </span>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 8, flexShrink: 0 }}>
-            <input type="date" value={node.date || ""} onChange={e => onSetDate(node.id, e.target.value)}
-              style={{ border: "none", background: "transparent", fontSize: 11.5, color: node.date ? "var(--wf-text-secondary)" : "var(--wf-text-faint)", outline: "none", width: 118, cursor: "pointer", fontFamily: "inherit" }} />
-            {items.length > 0 && (
-              <button onClick={() => setExpanded(!expanded)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-border)", padding: 4, opacity: 0.6 }}>
-                {expanded ? <ChevronUp size={13}/> : <ChevronDown size={13}/>}
-              </button>
-            )}
-            <button onClick={() => onRemove(node.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-border)", padding: 4, opacity: 0.6 }}>
-              <Trash2 size={13} />
-            </button>
-          </div>
-        </div>
-
-        {expanded && items.length > 0 && (
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {items.map((child) => (
-              <RecursiveLessonNode key={child.id} node={child} level={level + 1} color={color} bgLight={bgLight} onToggle={onToggle} onRemove={onRemove} onSetDate={onSetDate} onAddChild={onAddChild} onAddChildModule={onAddChildModule} onEditNode={onEditNode} />
-            ))}
-          </div>
-        )}
-        
-        {expanded && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: `6px 14px 6px ${14 + (level+1)*20}px`, background: "var(--wf-hover-soft)", minHeight: 38, position: "relative", borderBottom: "1px solid var(--wf-border-soft)" }}>
-            <div style={{ position: "absolute", left: 14 + level*20 + 8, top: 0, bottom: 0, width: 1, background: "var(--wf-border-soft)" }} />
-            <input
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === "Enter" && draft.trim()) {
-                  onAddChild(node.id, draft.trim());
-                  setDraft("");
-                }
-              }}
-              placeholder={"+ Thêm việc con cho bài học..."}
-              style={{ flex: 1, border: "none", background: "transparent", fontSize: 12.5, outline: "none", color: "var(--wf-text-muted)", fontFamily: "inherit" }} />
-          </div>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div style={isFullscreen ? {
@@ -3719,61 +3964,124 @@ function CoursePlannerView({ project, onUpdateProject, onSyncLessonTask }) {
           <div style={{ textAlign: "center", padding: "48px 0", color: "var(--wf-text-muted)", fontSize: 13 }}>Chưa có module nào. Thêm module đầu tiên bên dưới!</div>
         )}
         {modules.map((m, mi) => {
+          const modColors = ["#6366f1", "#10b981", "#f97316", "#ec4899", "#a855f7", "#eab308", "#06b6d4", "#ef4444"];
+          const modBgLight = ["#e0e7ff", "#d1fae5", "#ffedd5", "#fce7f3", "#f3e8ff", "#fef9c3", "#cffafe", "#fee2e2"];
           const color = modColors[mi % modColors.length];
           const bgLight = modBgLight[mi % modBgLight.length];
           const items = m.items || [];
           const modDone = items.filter(i => i.done).length;
           return (
-            <div key={m.id} style={{ display: "flex", borderBottom: "1px solid var(--wf-border-soft)" }}>
+            <div key={m.id}
+              draggable
+              onDragStart={(e) => {
+                if(e.target.closest('.wf-lesson-row')) {
+                  e.preventDefault();
+                  return;
+                }
+                onDragStart(mi);
+              }}
+              onDragOver={(e) => onDragOver(e, mi)}
+              onDrop={() => onDrop(mi)}
+              onDragEnd={onDragEnd}
+              style={{ display: "flex", borderBottom: `1px solid ${dragOverIdx===mi ? color : "var(--wf-border-soft)"}`,
+                opacity: dragIdx===mi ? 0.5 : 1, borderTop: dragOverIdx===mi && dragIdx!==null && dragIdx>mi ? `3px solid ${color}` : "none",
+                transition: "border-color 0.15s, opacity 0.15s" }}>
               {/* Left: Module label */}
-              <div style={{ width: 164, flexShrink: 0, padding: "14px 14px", background: bgLight, borderRight: "1px solid var(--wf-border-soft)", display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ width: 172, flexShrink: 0, padding: "12px 12px 12px 14px",
+                background: `linear-gradient(170deg, ${color}16 0%, ${color}08 100%)`,
+                borderRight: `3px solid ${color}`,
+                display: "flex", flexDirection: "column", gap: 5, cursor: "grab", userSelect: "none" }}>
                 <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 4 }}>
-                  <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                    <span dangerouslySetInnerHTML={{ __html: parseMD(m.name) }} style={{ fontSize: 12.5, fontWeight: 800, color, lineHeight: 1.35, wordBreak: "break-word" }}></span>
-                    <button onClick={() => { const newName = prompt("Tên module:", m.name); if(newName) onEditNode(m.id, {name: newName}); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-border)", padding: 2, opacity: 0.55 }} title="Sửa tên">
-                      <Edit2 size={12} />
-                    </button>
+                  <div style={{ display: "flex", gap: 4, alignItems: "center", width: "100%", paddingRight: 4 }}>
+                    {editingRootModules[m.id] ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+                        <input id={`edit-root-mod-${m.id}`} value={rootModuleDrafts[m.id] !== undefined ? rootModuleDrafts[m.id] : m.name} onChange={e => setRootModuleDrafts({...rootModuleDrafts, [m.id]: e.target.value})} onKeyDown={e => { if (e.key === 'Enter') { const val = rootModuleDrafts[m.id] !== undefined ? rootModuleDrafts[m.id].trim() : m.name; if (val && val !== m.name) onEditNode(m.id, {name: val}); setEditingRootModules({...editingRootModules, [m.id]: false}); } }} autoFocus style={{ flex: 1, border: "1px solid var(--wf-border)", background: "var(--wf-surface)", fontSize: 12.5, outline: "none", color: "var(--wf-text)", padding: "4px 8px", borderRadius: 4, fontFamily: "inherit" }} />
+                        <FormatButtons inputId={`edit-root-mod-${m.id}`} value={rootModuleDrafts[m.id] !== undefined ? rootModuleDrafts[m.id] : m.name} setValue={(val) => setRootModuleDrafts({...rootModuleDrafts, [m.id]: val})} />
+                        <button onClick={() => { const val = rootModuleDrafts[m.id] !== undefined ? rootModuleDrafts[m.id].trim() : m.name; if (val && val !== m.name) onEditNode(m.id, {name: val}); setEditingRootModules({...editingRootModules, [m.id]: false}); }} style={{ background: color, border: "none", color: "#fff", padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontWeight: "bold" }}>OK</button>
+                        <button onClick={() => setEditingRootModules({...editingRootModules, [m.id]: false})} style={{ background: "transparent", border: "1px solid var(--wf-border)", color: "var(--wf-text)", padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 11 }}>Hủy</button>
+                      </div>
+                    ) : (
+                      <>
+                        <span style={{ fontSize: 12.5, fontWeight: 800, color, marginRight: 6 }}>{mi + 1}.</span>
+                        <span dangerouslySetInnerHTML={{ __html: parseMD(m.name) }} style={{ flex: 1, fontSize: 12.5, fontWeight: 800, color, lineHeight: 1.35, wordBreak: "break-word" }}></span>
+                        <button onClick={() => { setRootModuleDrafts({...rootModuleDrafts, [m.id]: m.name}); setEditingRootModules({...editingRootModules, [m.id]: true}); }} style={{ background: "none", border: "none", cursor: "pointer", color: color, padding: 2, opacity: 0.7, flexShrink: 0 }} title="Sửa tên">
+                          <Edit2 size={12} />
+                        </button>
+                      </>
+                    )}
                   </div>
-                  <button onClick={() => onRemoveLesson(m.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-border)", padding: 2, opacity: 0.55, flexShrink: 0 }} title="Xóa module">
+                  <button onClick={() => onRemoveLesson(m.id)} style={{ background: "none", border: "none", cursor: "pointer", color: color, padding: 2, opacity: 0.7, flexShrink: 0 }} title="Xóa module">
                     <Trash2 size={12} />
                   </button>
                 </div>
-                <div style={{ fontSize: 10.5, color: "var(--wf-text-muted)", fontWeight: 600 }}>{m.duration}</div>
-                <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
-                  <BookOpen size={10} color={color} />
-                  <div style={{ width: 14, height: 14, borderRadius: "50%", border: `2.5px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: "50%", background: modDone===items.length && items.length>0 ? color : "transparent" }} />
+                <div style={{ fontSize: 10, color: color, fontWeight: 700, opacity: 0.85, display: "flex", alignItems: "center", gap: 4 }}>
+                  <BookOpen size={9} color={color} />{m.duration}
+                </div>
+                {items.length > 0 && (() => { let t=0,d=0; const cnt=(ns)=>{for(const n of ns){if(n.items&&n.items.length>0)cnt(n.items);else if(n.text){t++;if(n.done)d++;}}};cnt(items);const pct=t>0?Math.round((d/t)*100):0; return (
+                  <div style={{ marginTop: 2 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                      <span style={{ fontSize: 9, color: "var(--wf-text-muted)" }}>{d}/{t} bài</span>
+                      <span style={{ fontSize: 9, fontWeight: 800, color: pct===100?"#10b981":color }}>{pct}%</span>
+                    </div>
+                    <div style={{ height: 3, borderRadius: 3, background: color+"20" }}>
+                      <div style={{ height: "100%", width: pct+"%", background: pct===100?"#10b981":color, borderRadius: 3, transition: "width 0.4s ease" }} />
+                    </div>
                   </div>
-                  {items.length > 0 && <span style={{ fontSize: 10, color: "var(--wf-text-muted)" }}>{modDone}/{items.length}</span>}
+                ); })()}
+                <div style={{ display: "flex", alignItems: "center", gap: 2, marginTop: 3, opacity: 0.7 }}>
+                  <GripVertical size={11} color={color} />
+                  <span style={{ fontSize: 9, color: "var(--wf-text-muted)" }}>kéo thả</span>
                 </div>
               </div>
 
               {/* Right: Lessons */}
               <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                {items.map((item) => (
-                  <RecursiveLessonNode key={item.id} node={item} level={0} color={color} bgLight={bgLight} onToggle={onToggleLesson} onRemove={onRemoveLesson} onSetDate={onSetLessonDate} onAddChild={onAddLesson} onAddChildModule={onAddChildModule} onEditNode={onEditNode} />
+                {items.map((item, itemIdx) => (
+                  <div key={item.id}
+                    draggable={!item.name}
+                    onDragStart={(e) => { e.stopPropagation(); setDragSource({ id: item.id, parentId: m.id }); }}
+                    onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragTarget({ parentId: m.id, index: itemIdx }); }}
+                    onDrop={(e) => {
+                      e.stopPropagation();
+                      onGlobalDrop(m.id, itemIdx);
+                    }}
+                    onDragEnd={() => { setDragSource(null); setDragTarget(null); }}
+                    style={{
+                      opacity: dragSource && dragSource.id === item.id ? 0.4 : 1,
+                      borderTop: dragTarget && dragTarget.parentId === m.id && dragTarget.index === itemIdx && (!dragSource || dragSource.id !== item.id) ? `2px solid ${color}` : "none",
+                      transition: "opacity 0.15s"
+                    }}>
+                    <RecursiveLessonNode node={item} indexPrefix={`${mi + 1}.${itemIdx + 1}`} level={0} color={color} bgLight={bgLight} onToggle={onToggleLesson} onRemove={onRemoveLesson} onSetDate={onSetLessonDate} onAddChild={onAddLesson} onAddChildModule={onAddChildModule} onEditNode={onEditNode} onReorder={onReorderChildren} parentId={m.id} itemIndex={itemIdx} dragSource={dragSource} dragTarget={dragTarget} setDragSource={setDragSource} setDragTarget={setDragTarget} onGlobalDrop={onGlobalDrop} />
+                  </div>
                 ))}
 
                 {/* Add lesson row */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", background: "var(--wf-hover-soft)", borderTop: items.length>0 ? "1px solid var(--wf-border-soft)" : "none", minHeight: 38 }}>
-                  <input
-                    id={`input-lesson-${m.id}`}
-                    value={lessonDrafts[m.id] || ""}
-                    onChange={e => setLessonDrafts({...lessonDrafts,[m.id]:e.target.value})}
-                    onKeyDown={e => {
-                      if (e.key === "Enter" && lessonDrafts[m.id]?.trim()) {
-                        onAddLesson(m.id, lessonDrafts[m.id].trim());
-                        setLessonDrafts({...lessonDrafts,[m.id]:""});
-                      }
-                    }}
-                    placeholder={"+ Bài học cho " + m.name + "..."}
-                    style={{ flex: 1, border: "none", background: "transparent", fontSize: 12.5, outline: "none", color: "var(--wf-text-muted)", fontFamily: "inherit" }} />
-                  <FormatButtons inputId={`input-lesson-${m.id}`} value={lessonDrafts[m.id] || ""} setValue={(val) => setLessonDrafts({...lessonDrafts, [m.id]: val})} />
-                  <button onClick={() => { if (lessonDrafts[m.id]) { onAddLesson(m.id, lessonDrafts[m.id]); setLessonDrafts({...lessonDrafts,[m.id]:""}); } }}
-                    style={{ width: 26, height: 26, borderRadius: 8, background: color, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
-                    <Plus size={14} color="#fff" />
-                  </button>
-                  <button onClick={() => { const name = prompt("Tên module con:"); if(name) onAddChildModule(m.id, name); }} style={{ background: "none", border: "none", cursor: "pointer", color: color, fontSize: 11, fontWeight: 700, flexShrink: 0 }}>+ Module con</button>
+                <div style={{ padding: "6px 14px", background: "var(--wf-hover-soft)", borderTop: items.length>0 ? "1px solid var(--wf-border-soft)" : "none" }}>
+                  {addingRootLessons[m.id] ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 26 }}>
+                      <input id={`input-lesson-${m.id}`} value={lessonDrafts[m.id] || ""} onChange={e => setLessonDrafts({...lessonDrafts,[m.id]:e.target.value})} onKeyDown={e => { if (e.key === "Enter" && lessonDrafts[m.id]?.trim()) { onAddLesson(m.id, lessonDrafts[m.id].trim()); setLessonDrafts({...lessonDrafts,[m.id]:""}); setAddingRootLessons({...addingRootLessons, [m.id]: false}); } }} autoFocus placeholder={"+ Bài học cho " + m.name + "..."} style={{ flex: 1, border: "1px solid var(--wf-border)", background: "var(--wf-surface)", fontSize: 12.5, outline: "none", color: "var(--wf-text)", fontFamily: "inherit", padding: "4px 8px", borderRadius: 4 }} />
+                      <FormatButtons inputId={`input-lesson-${m.id}`} value={lessonDrafts[m.id] || ""} setValue={(val) => setLessonDrafts({...lessonDrafts, [m.id]: val})} />
+                      <button onClick={() => { if (lessonDrafts[m.id]?.trim()) { onAddLesson(m.id, lessonDrafts[m.id].trim()); setLessonDrafts({...lessonDrafts,[m.id]:""}); } setAddingRootLessons({...addingRootLessons, [m.id]: false}); }} style={{ background: color, border: "none", color: "#fff", padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontWeight: "bold" }}>OK</button>
+                      <button onClick={() => { setAddingRootLessons({...addingRootLessons, [m.id]: false}); setLessonDrafts({...lessonDrafts,[m.id]:""}); }} style={{ background: "transparent", border: "1px solid var(--wf-border)", color: "var(--wf-text)", padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 11 }}>Hủy</button>
+                    </div>
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <button onClick={() => setAddingRootLessons({...addingRootLessons, [m.id]: true})} style={{ background: "none", border: "none", color: "var(--wf-text-muted)", cursor: "pointer", fontSize: 12.5, padding: "4px 0", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+                        <Plus size={14} /> Thêm bài học
+                      </button>
+                      {addingRootSubModules[m.id] ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <input value={rootSubModuleDrafts[m.id] || ""} onChange={e => setRootSubModuleDrafts({...rootSubModuleDrafts, [m.id]: e.target.value})} onKeyDown={e => { if(e.key === 'Enter' && rootSubModuleDrafts[m.id]?.trim()) { onAddChildModule(m.id, rootSubModuleDrafts[m.id].trim()); setRootSubModuleDrafts({...rootSubModuleDrafts, [m.id]: ""}); setAddingRootSubModules({...addingRootSubModules, [m.id]: false}); } }} autoFocus placeholder="Tên module con..." style={{ border: "1px solid var(--wf-border)", background: "var(--wf-surface)", fontSize: 11, outline: "none", color: "var(--wf-text)", padding: "4px 8px", borderRadius: 4, fontFamily: "inherit", width: 120 }} />
+                          <button onClick={() => { if(rootSubModuleDrafts[m.id]?.trim()) { onAddChildModule(m.id, rootSubModuleDrafts[m.id].trim()); setRootSubModuleDrafts({...rootSubModuleDrafts, [m.id]: ""}); } setAddingRootSubModules({...addingRootSubModules, [m.id]: false}); }} style={{ background: color, border: "none", color: "#fff", padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 11, fontWeight: "bold" }}>OK</button>
+                          <button onClick={() => { setAddingRootSubModules({...addingRootSubModules, [m.id]: false}); setRootSubModuleDrafts({...rootSubModuleDrafts, [m.id]: ""}); }} style={{ background: "transparent", border: "1px solid var(--wf-border)", color: "var(--wf-text)", padding: "4px 8px", borderRadius: 4, cursor: "pointer", fontSize: 11 }}>Hủy</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setAddingRootSubModules({...addingRootSubModules, [m.id]: true})} style={{ background: "none", border: "none", cursor: "pointer", color: color, fontSize: 11, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
+                          <Plus size={12} /> Module con
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -3820,7 +4128,7 @@ function ProjectWorkspace({ project, projects, tasks, projectTab, setProjectTab,
       </button>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
         <div style={{ width: 40, height: 40, borderRadius: 12, background: project.grad }} />
-        <div><div style={{ fontWeight: 700, fontSize: 16 }}>{project.name}</div><div style={{ fontSize: 11.5, color: "var(--wf-text-faint)" }}>🔒 Không gian riêng tư</div></div>
+        <div><div style={{ fontWeight: 700, fontSize: 16 }}>{project.name}</div><div style={{ fontSize: 11.5, color: "var(--wf-text-muted)" }}>🔒 Không gian riêng tư</div></div>
       </div>
 
       {/* Mô tả dự án + tệp đính kèm */}
@@ -3842,13 +4150,13 @@ function ProjectWorkspace({ project, projects, tasks, projectTab, setProjectTab,
               <div key={a.id} className="wf-row" style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--wf-hover-soft)", borderRadius: 9, padding: "7px 10px" }}>
                 <FileText size={14} style={{ color: "#6366f1", flexShrink: 0 }} />
                 <a href={a.url} download={a.name} target="_blank" rel="noreferrer" style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600, color: "var(--wf-text)", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</a>
-                <span style={{ fontSize: 10.5, color: "var(--wf-text-faint)", flexShrink: 0 }}>{formatFileSize(a.size)}</span>
+                <span style={{ fontSize: 10.5, color: "var(--wf-text-muted)", flexShrink: 0 }}>{formatFileSize(a.size)}</span>
                 <button onClick={() => onRemoveAttachment && onRemoveAttachment(project.id, a.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-border)", flexShrink: 0 }}><Trash2 size={12} /></button>
               </div>
             ))}
           </div>
         ) : (
-          <div style={{ fontSize: 11.5, color: "var(--wf-text-faint)" }}>Chưa có tệp nào được đính kèm.</div>
+          <div style={{ fontSize: 11.5, color: "var(--wf-text-muted)" }}>Chưa có tệp nào được đính kèm.</div>
         )}
       </div>
 
@@ -3969,7 +4277,7 @@ function GroupProjectsGallery({ projects, friends, onOpen, onAdd, onRemove, onAd
             <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>Cài đặt Dự án: {sp.name}</div>
             <div style={{ background: "var(--wf-bg)", border: "1px solid var(--wf-border)", borderRadius: 12, padding: 12, marginBottom: 16, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <div>
-                <div style={{ fontSize: 11, color: "var(--wf-text-faint)", marginBottom: 4 }}>Mã tham gia dự án</div>
+                <div style={{ fontSize: 11, color: "var(--wf-text-muted)", marginBottom: 4 }}>Mã tham gia dự án</div>
                 <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 15, letterSpacing: 1 }}>{sp.inviteCode || sp.id.substring(0, 6).toUpperCase()}</div>
               </div>
               <button onClick={() => { navigator.clipboard?.writeText(sp.inviteCode || sp.id.substring(0, 6).toUpperCase()).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }); }} style={{ background: copied ? "#10b981" : "var(--wf-hover-soft)", color: copied ? "#fff" : "inherit", border: "none", borderRadius: 8, cursor: "pointer", padding: 8, transition: "all 0.2s" }}>{copied ? <Check size={14} /> : <Paperclip size={14} />}</button>
@@ -4153,7 +4461,7 @@ function SharedCalendarView({ project, onUpdateProject }) {
           <tbody>
             {hours.map(h => (
               <tr key={h}>
-                <td style={{ fontSize: 11, fontWeight: 700, color: "var(--wf-text-faint)", textAlign: "right", paddingRight: 10 }}>
+                <td style={{ fontSize: 11, fontWeight: 700, color: "var(--wf-text-muted)", textAlign: "right", paddingRight: 10 }}>
                   {h}:00
                 </td>
                 {days.map(d => {
@@ -4247,7 +4555,7 @@ function GroupProjectWorkspace({ project, projects, projectTab, setProjectTab, o
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 40, height: 40, borderRadius: 12, background: project.grad }} />
-          <div><div style={{ fontWeight: 700, fontSize: 16 }}>{project.name}</div><div style={{ fontSize: 11.5, color: "var(--wf-text-faint)" }}>Nhiệm vụ được chia sẻ</div></div>
+          <div><div style={{ fontWeight: 700, fontSize: 16 }}>{project.name}</div><div style={{ fontSize: 11.5, color: "var(--wf-text-muted)" }}>Nhiệm vụ được chia sẻ</div></div>
         </div>
         <div style={{ position: "relative" }}>
           <div style={{ display: "flex", alignItems: "center", cursor: "pointer", padding: 4, borderRadius: 20, transition: "background 0.2s" }} onClick={() => setShowMembersList(!showMembersList)} className="wf-hover-bg">
@@ -4256,14 +4564,14 @@ function GroupProjectWorkspace({ project, projects, projectTab, setProjectTab, o
                  {getInitials(m)}
                </div>
             ))}
-            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--wf-bg)", border: "1px dashed var(--wf-border)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--wf-text-faint)", marginLeft: 6 }} title="Thêm thành viên">
+            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--wf-bg)", border: "1px dashed var(--wf-border)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--wf-text-muted)", marginLeft: 6 }} title="Thêm thành viên">
               <Plus size={14} />
             </div>
           </div>
           
           {showMembersList && (
             <div style={{ position: "absolute", top: 44, right: 0, width: 220, background: "var(--wf-surface)", border: "1px solid var(--wf-border)", borderRadius: 12, boxShadow: "0 10px 30px rgba(0,0,0,0.15)", zIndex: 100, padding: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 12, color: "var(--wf-text-faint)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 12, color: "var(--wf-text-muted)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span>Danh sách thành viên</span>
                 <span style={{ background: "var(--wf-bg)", padding: "2px 6px", borderRadius: 10, fontSize: 10 }}>{project.members.length}</span>
               </div>
@@ -4280,7 +4588,7 @@ function GroupProjectWorkspace({ project, projects, projectTab, setProjectTab, o
 
               {friends && friends.filter(f => !project.members.includes(f.name)).length > 0 && (
                 <>
-                  <div style={{ fontSize: 12, fontWeight: 700, margin: "16px 0 12px 0", color: "var(--wf-text-faint)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, margin: "16px 0 12px 0", color: "var(--wf-text-muted)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span>Mời bạn bè</span>
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -4315,7 +4623,7 @@ function GroupProjectWorkspace({ project, projects, projectTab, setProjectTab, o
         <div style={{ marginTop: 24, overflowX: "auto", border: "1px solid var(--wf-border)", borderRadius: 12, background: "var(--wf-surface)" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, textAlign: "left", whiteSpace: "nowrap" }}>
             <thead>
-              <tr style={{ borderBottom: "1px solid var(--wf-border)", color: "var(--wf-text-faint)" }}>
+              <tr style={{ borderBottom: "1px solid var(--wf-border)", color: "var(--wf-text-muted)" }}>
                 <th style={{ padding: "12px 16px", fontWeight: 600 }}>Chuyên mục</th>
                 <th style={{ padding: "12px 16px", fontWeight: 600 }}>Công việc cụ thể</th>
                 <th style={{ padding: "12px 16px", fontWeight: 600 }}>Tham gia</th>
@@ -4382,7 +4690,7 @@ function GroupProjectWorkspace({ project, projects, projectTab, setProjectTab, o
                             let sum = 0; for (let i=0; i<name.length; i++) sum += name.charCodeAt(i);
                             return colors[sum % colors.length];
                           };
-                          if (!list || list.length === 0) return <span style={{ color: "var(--wf-text-faint)", fontStyle: "italic" }}>Chưa giao</span>;
+                          if (!list || list.length === 0) return <span style={{ color: "var(--wf-text-muted)", fontStyle: "italic" }}>Chưa giao</span>;
                           return list.map((name, i) => (
                             <span key={i} style={{ background: getBg(name) + "1a", color: getBg(name), padding: "2px 8px", borderRadius: 12, fontSize: 11, fontWeight: 700, border: `1px solid ${getBg(name)}40`, whiteSpace: "nowrap" }}>
                               {name}
@@ -4431,7 +4739,7 @@ function GroupProjectWorkspace({ project, projects, projectTab, setProjectTab, o
                 </tr>
               ))}
               {tasks.length === 0 && (
-                <tr><td colSpan={4 + project.members.length} style={{ textAlign: "center", padding: 40, color: "var(--wf-text-faint)" }}>Chưa có nhiệm vụ nào cho dự án này.</td></tr>
+                <tr><td colSpan={4 + project.members.length} style={{ textAlign: "center", padding: 40, color: "var(--wf-text-muted)" }}>Chưa có nhiệm vụ nào cho dự án này.</td></tr>
               )}
               <tr>
                 <td colSpan={4 + project.members.length} style={{ padding: "12px 16px", borderTop: "1px solid var(--wf-border-soft)" }}>
@@ -4439,7 +4747,7 @@ function GroupProjectWorkspace({ project, projects, projectTab, setProjectTab, o
                     if (onAddTask) {
                       onAddTask({ id: Date.now(), title: "Nhiệm vụ mới", type: "team", project: project.name, category: "Chung", priority: "Vừa", status: "todo", due: new Date().toISOString().slice(0,10), assignees: [], completedMembers: [], subtasks: [], comments: [] });
                     }
-                  }} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "var(--wf-text-faint)", fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "6px 0", transition: "color 0.2s" }} onMouseOver={(e) => e.currentTarget.style.color = "#6366f1"} onMouseOut={(e) => e.currentTarget.style.color = "var(--wf-text-faint)"}>
+                  }} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: "var(--wf-text-muted)", fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "6px 0", transition: "color 0.2s" }} onMouseOver={(e) => e.currentTarget.style.color = "#6366f1"} onMouseOut={(e) => e.currentTarget.style.color = "var(--wf-text-muted)"}>
                     <Plus size={14} /> Thêm nhiệm vụ mới
                   </button>
                 </td>
@@ -4563,7 +4871,7 @@ function TaskDetailModal({ task, onClose, onToggleSub, commentDraft, setCommentD
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-text-muted)", flexShrink: 0 }}><X size={18} /></button>
         </div>
-        <div style={{ fontSize: 12, color: "var(--wf-text-faint)", marginBottom: 14 }}>Hạn: {task.due} {task.due < todayStr && task.status !== "done" ? "· ⚠️ Trễ hạn" : ""}</div>
+        <div style={{ fontSize: 12, color: "var(--wf-text-muted)", marginBottom: 14 }}>Hạn: {task.due} {task.due < todayStr && task.status !== "done" ? "· ⚠️ Trễ hạn" : ""}</div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           <button onClick={() => onCycle(task.id)} style={badgeStyle(statusColor[task.status])}>{statusLabel[task.status]}</button>
@@ -4593,13 +4901,13 @@ function TaskDetailModal({ task, onClose, onToggleSub, commentDraft, setCommentD
                 <div key={a.id} className="wf-row" style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--wf-hover-soft)", borderRadius: 9, padding: "7px 10px" }}>
                   <FileText size={14} style={{ color: "#6366f1", flexShrink: 0 }} />
                   <a href={a.url} download={a.name} target="_blank" rel="noreferrer" style={{ flex: 1, minWidth: 0, fontSize: 12, fontWeight: 600, color: "var(--wf-text)", textDecoration: "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.name}</a>
-                  <span style={{ fontSize: 10.5, color: "var(--wf-text-faint)", flexShrink: 0 }}>{formatFileSize(a.size)}</span>
+                  <span style={{ fontSize: 10.5, color: "var(--wf-text-muted)", flexShrink: 0 }}>{formatFileSize(a.size)}</span>
                   <button onClick={() => onRemoveAttachment && onRemoveAttachment(task.id, a.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-border)", flexShrink: 0 }}><Trash2 size={12} /></button>
                 </div>
               ))}
             </div>
           ) : (
-            <div style={{ fontSize: 11.5, color: "var(--wf-text-faint)" }}>Chưa có tệp nào được đính kèm.</div>
+            <div style={{ fontSize: 11.5, color: "var(--wf-text-muted)" }}>Chưa có tệp nào được đính kèm.</div>
           )}
         </div>
 
@@ -4607,7 +4915,7 @@ function TaskDetailModal({ task, onClose, onToggleSub, commentDraft, setCommentD
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--wf-text-secondary)", marginBottom: 6 }}>Phân công</div>
             <div style={{ fontSize: 12.5 }}>Chịu trách nhiệm: <b>{task.assignee || task.owner}</b></div>
-            {task.watchers?.length > 0 && <div style={{ fontSize: 12.5, color: "var(--wf-text-faint)" }}>Theo dõi: {task.watchers.join(", ")}</div>}
+            {task.watchers?.length > 0 && <div style={{ fontSize: 12.5, color: "var(--wf-text-muted)" }}>Theo dõi: {task.watchers.join(", ")}</div>}
           </div>
         )}
 
@@ -4711,7 +5019,7 @@ function HabitTrackerView({ habits, onAddHabit, onRemoveHabit, onToggleHabitDay,
         <div style={{ display: "inline-flex", alignItems: "center", gap: 8, background: "linear-gradient(135deg,#818cf8,#6366f1)", color: "#fff", fontWeight: 700, fontSize: 14, borderRadius: 999, padding: "10px 20px", boxShadow: "0 8px 18px rgba(99,102,241,0.35)" }}>
           <Repeat size={16} /> Habit Tracker
         </div>
-        <div style={{ fontSize: 12.5, color: "var(--wf-text-faint)" }}>{doneToday}/{habits.length} thói quen hoàn thành hôm nay</div>
+        <div style={{ fontSize: 12.5, color: "var(--wf-text-muted)" }}>{doneToday}/{habits.length} thói quen hoàn thành hôm nay</div>
       </div>
 
       <div style={{ background: "var(--wf-surface)", borderRadius: 14, padding: 12, marginBottom: 16, display: "flex", gap: 8, alignItems: "center", boxShadow: "0 8px 20px rgba(26,32,53,0.06)" }}>
@@ -4747,7 +5055,7 @@ function HabitTrackerView({ habits, onAddHabit, onRemoveHabit, onToggleHabitDay,
               style={{ borderRadius: 16, padding: 16, opacity: dragIdx === idx ? 0.4 : 1, outline: overIdx === idx && dragIdx !== idx ? "2px dashed #6366f1" : "none", outlineOffset: 2, cursor: onReorder && !isExpanded ? "grab" : "default", gridColumn: isExpanded ? "1 / -1" : "auto", transition: "all 0.3s ease" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
                 <span onClick={() => setExpandedHabit(isExpanded ? null : h.name)} style={{ fontSize: 13.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                  {onReorder && <GripVertical size={13} style={{ color: "var(--wf-text-faint)" }} />}{h.name} {isExpanded ? <ChevronUp size={14} color="var(--wf-text-muted)" /> : <ChevronDown size={14} color="var(--wf-text-muted)" />}
+                  {onReorder && <GripVertical size={13} style={{ color: "var(--wf-text-muted)" }} />}{h.name} {isExpanded ? <ChevronUp size={14} color="var(--wf-text-muted)" /> : <ChevronDown size={14} color="var(--wf-text-muted)" />}
                 </span>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 700, color: "#d97706" }}><Flame size={13} /> {curStreak}</span>
@@ -4903,7 +5211,7 @@ function PomodoroView({ focusTimer, focusSettings, focusLog, tasks, pomoStats, o
           <button onClick={onReset} className="wf-btn" style={{ ...secondaryBtnStyle, padding: "11px 18px", display: "flex", alignItems: "center", gap: 6 }}><RotateCcw size={14} /> Reset</button>
           <button onClick={onZen} className="wf-btn" style={{ background: "#1a2035", color: "#fff", border: "none", borderRadius: 10, padding: "11px 18px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}><Maximize2 size={14} /> Zen Mode</button>
         </div>
-        <div style={{ fontSize: 11, color: "var(--wf-text-faint)" }}>Chu kỳ hiện tại: {focusTimer.cycleCount} phiên tập trung · Nghỉ dài sau mỗi {focusSettings.longEvery} phiên</div>
+        <div style={{ fontSize: 11, color: "var(--wf-text-muted)" }}>Chu kỳ hiện tại: {focusTimer.cycleCount} phiên tập trung · Nghỉ dài sau mỗi {focusSettings.longEvery} phiên</div>
 
         <div style={{ textAlign: "left", marginTop: 22, paddingTop: 18, borderTop: "1px solid var(--wf-border-soft)" }}>
           <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 10 }}>Cài đặt thời lượng (phút)</div>
@@ -4928,15 +5236,15 @@ function PomodoroView({ focusTimer, focusSettings, focusLog, tasks, pomoStats, o
         <div className="wf-pomo-stats-grid">
           <div className="wf-card wf-card-pop" style={{ borderRadius: 16, padding: 16, textAlign: "center" }}>
             <div style={{ fontSize: 22, fontWeight: 900, color: "#6366f1" }}>{stats.sessionsToday}</div>
-            <div style={{ fontSize: 11, color: "var(--wf-text-faint)" }}>Phiên hôm nay</div>
+            <div style={{ fontSize: 11, color: "var(--wf-text-muted)" }}>Phiên hôm nay</div>
           </div>
           <div className="wf-card wf-card-pop" style={{ borderRadius: 16, padding: 16, textAlign: "center" }}>
             <div style={{ fontSize: 22, fontWeight: 900, color: "#10b981" }}>{stats.totalMinutesToday}p</div>
-            <div style={{ fontSize: 11, color: "var(--wf-text-faint)" }}>Phút tập trung hôm nay</div>
+            <div style={{ fontSize: 11, color: "var(--wf-text-muted)" }}>Phút tập trung hôm nay</div>
           </div>
           <div className="wf-card wf-card-pop" style={{ borderRadius: 16, padding: 16, textAlign: "center" }}>
             <div style={{ fontSize: 22, fontWeight: 900, color: "#f59e0b", display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}><Flame size={18} />{stats.streak}</div>
-            <div style={{ fontSize: 11, color: "var(--wf-text-faint)" }}>Ngày liên tiếp</div>
+            <div style={{ fontSize: 11, color: "var(--wf-text-muted)" }}>Ngày liên tiếp</div>
           </div>
         </div>
 
@@ -4946,7 +5254,7 @@ function PomodoroView({ focusTimer, focusSettings, focusLog, tasks, pomoStats, o
             <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 80 }}>
               {stats.last7.map((d) => (
                 <div key={d.day} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                  <div style={{ fontSize: 9, color: "var(--wf-text-faint)", fontWeight: 700 }}>{d.minutes > 0 ? `${d.minutes}p` : ""}</div>
+                  <div style={{ fontSize: 9, color: "var(--wf-text-muted)", fontWeight: 700 }}>{d.minutes > 0 ? `${d.minutes}p` : ""}</div>
                   <div style={{ width: "100%", maxWidth: 20, height: Math.max(4, (d.minutes / maxMinutes) * 55), background: d.date === todayStr ? "linear-gradient(180deg,#818cf8,#6366f1)" : "linear-gradient(180deg,#c7d2fe,#a5b4fc)", borderRadius: 4, transition: "height 0.3s ease" }} />
                 </div>
               ))}
@@ -4957,7 +5265,7 @@ function PomodoroView({ focusTimer, focusSettings, focusLog, tasks, pomoStats, o
             <div style={{ display: "flex", alignItems: "center", gap: 14, flex: 1 }}>
               <div style={{ width: 64, height: 64, borderRadius: "50%", background: Object.keys(tagsCount).length > 0 ? `conic-gradient(${pieGradient})` : "#e5e7eb", flexShrink: 0, boxShadow: "inset 0 2px 6px rgba(0,0,0,0.06)" }}></div>
               <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4, overflowY: "auto", maxHeight: 70 }} className="wf-scrollbar">
-                {Object.keys(tagsCount).length === 0 ? <span style={{ fontSize: 11, color: "var(--wf-text-faint)" }}>Chưa có tag nào</span> : 
+                {Object.keys(tagsCount).length === 0 ? <span style={{ fontSize: 11, color: "var(--wf-text-muted)" }}>Chưa có tag nào</span> : 
                  Object.entries(tagsCount).map(([t, mins]) => (
                   <div key={t} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10.5, color: "var(--wf-text-secondary)", fontWeight: 600 }}>
                     <div style={{ width: 8, height: 8, borderRadius: "50%", background: tagColors[t] || "#9ca3af" }}></div>
@@ -4975,7 +5283,7 @@ function PomodoroView({ focusTimer, focusSettings, focusLog, tasks, pomoStats, o
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}><Calendar size={15} color="#6366f1" /> Nhật ký phiên gần đây</div>
             <button onClick={() => setLogExpanded(true)} className="wf-icon-btn" title="Phóng to nhật ký" style={{ background: "rgba(99,102,241,0.1)", border: "none", cursor: "pointer", color: "#6366f1", padding: 4, borderRadius: 6, display: "flex" }}><Maximize2 size={14} /></button>
           </div>
-          {focusLog.length === 0 && <div style={{ fontSize: 12.5, color: "var(--wf-text-faint)" }}>Chưa có phiên nào được ghi nhận. Bắt đầu Pomodoro đầu tiên nào!</div>}
+          {focusLog.length === 0 && <div style={{ fontSize: 12.5, color: "var(--wf-text-muted)" }}>Chưa có phiên nào được ghi nhận. Bắt đầu Pomodoro đầu tiên nào!</div>}
           {focusLog.slice(0, 30).map((l) => {
             const m = focusModeMeta[l.type];
             const isExpanded = expandedId === l.id;
@@ -5008,7 +5316,7 @@ function PomodoroView({ focusTimer, focusSettings, focusLog, tasks, pomoStats, o
                       {l.done && <div style={{ fontSize: 12, marginBottom: 4 }}><span style={{ fontWeight: 700, color: "var(--wf-text-secondary)" }}>Đã làm:</span> {l.done}</div>}
                       {l.difficulty && <div style={{ fontSize: 12, marginBottom: 4 }}><span style={{ fontWeight: 700, color: "var(--wf-text-secondary)" }}>Khó khăn:</span> {l.difficulty}</div>}
                       {l.solution && <div style={{ fontSize: 12 }}><span style={{ fontWeight: 700, color: "var(--wf-text-secondary)" }}>Giải pháp:</span> {l.solution}</div>}
-                      {!hasReflection && <div style={{ fontSize: 12, color: "var(--wf-text-faint)", fontStyle: "italic" }}>Chưa có ghi chú nào. Bấm "Ghi chú" để thêm nhật ký.</div>}
+                      {!hasReflection && <div style={{ fontSize: 12, color: "var(--wf-text-muted)", fontStyle: "italic" }}>Chưa có ghi chú nào. Bấm "Ghi chú" để thêm nhật ký.</div>}
                     </div>
                   </div>
                 )}
@@ -5026,7 +5334,7 @@ function PomodoroView({ focusTimer, focusSettings, focusLog, tasks, pomoStats, o
             <h2 style={{ fontSize: 24, fontWeight: 800, color: "var(--wf-text)", marginBottom: 28, display: "flex", alignItems: "center", gap: 10 }}><Calendar size={28} color="#6366f1" /> Toàn bộ Nhật ký phiên tập trung</h2>
             
             {focusLog.length === 0 ? (
-               <div style={{ fontSize: 14, color: "var(--wf-text-faint)", textAlign: "center", padding: "40px 0" }}>Chưa có nhật ký nào.</div>
+               <div style={{ fontSize: 14, color: "var(--wf-text-muted)", textAlign: "center", padding: "40px 0" }}>Chưa có nhật ký nào.</div>
             ) : (
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, textAlign: "left" }}>
                 <thead>
@@ -5055,7 +5363,7 @@ function PomodoroView({ focusTimer, focusSettings, focusLog, tasks, pomoStats, o
                           </div>
                         </td>
                         <td style={{ padding: "16px 8px", color: "var(--wf-text)" }}>
-                          {l.done ? <div style={{ lineHeight: 1.4 }}>{l.done}</div> : <span style={{ color: "var(--wf-text-faint)", fontStyle: "italic" }}>-</span>}
+                          {l.done ? <div style={{ lineHeight: 1.4 }}>{l.done}</div> : <span style={{ color: "var(--wf-text-muted)", fontStyle: "italic" }}>-</span>}
                         </td>
                         <td style={{ padding: "16px 8px" }}>
                           {(l.difficulty || l.solution) ? (
@@ -5063,12 +5371,12 @@ function PomodoroView({ focusTimer, focusSettings, focusLog, tasks, pomoStats, o
                               {l.difficulty && <div><span style={{ fontWeight: 700, color: "#ef4444", fontSize: 12 }}>⚠ Khó khăn:</span><br/><span style={{ lineHeight: 1.4, color: "var(--wf-text)" }}>{l.difficulty}</span></div>}
                               {l.solution && <div><span style={{ fontWeight: 700, color: "#10b981", fontSize: 12 }}>💡 Giải pháp:</span><br/><span style={{ lineHeight: 1.4, color: "var(--wf-text)" }}>{l.solution}</span></div>}
                             </div>
-                          ) : <span style={{ color: "var(--wf-text-faint)", fontStyle: "italic" }}>-</span>}
+                          ) : <span style={{ color: "var(--wf-text-muted)", fontStyle: "italic" }}>-</span>}
                         </td>
                         <td style={{ padding: "16px 8px" }}>
                           {l.rating > 0 ? (
                             <div style={{ display: "flex", gap: 2 }}>{Array(5).fill(0).map((_, i) => <Star key={i} size={13} color={i < l.rating ? "#f59e0b" : "#e5e7eb"} fill={i < l.rating ? "#f59e0b" : "none"} />)}</div>
-                          ) : <span style={{ color: "var(--wf-text-faint)", fontStyle: "italic" }}>-</span>}
+                          ) : <span style={{ color: "var(--wf-text-muted)", fontStyle: "italic" }}>-</span>}
                         </td>
                         <td style={{ padding: "16px 8px", textAlign: "right" }}>
                           {l.type === "work" && (
@@ -5166,7 +5474,7 @@ function ReflectionModal({ entry, onClose, onSave }) {
           <h3 className="wf-heading" style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>📝 Nhật ký phiên tập trung</h3>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-text-muted)" }}><X size={18} /></button>
         </div>
-        {entry.taskTitle && <div style={{ fontSize: 12, color: "var(--wf-text-faint)", marginBottom: 14 }}>🎯 {entry.taskTitle} · {entry.minutes} phút</div>}
+        {entry.taskTitle && <div style={{ fontSize: 12, color: "var(--wf-text-muted)", marginBottom: 14 }}>🎯 {entry.taskTitle} · {entry.minutes} phút</div>}
 
         <label style={labelStyle}>Phân loại công việc (Tag)</label>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
@@ -5257,7 +5565,7 @@ function MembersView({ tasks, members, onAddMember, onRemoveMember }) {
             <div key={b.name} style={{ background: b.earned ? "#fffbeb" : "#f5f7ff", borderRadius: 12, padding: 14, textAlign: "center", opacity: b.earned ? 1 : 0.5 }}>
               <div style={{ fontSize: 26 }}>{b.icon}</div>
               <div style={{ fontSize: 12, fontWeight: 700, marginTop: 6 }}>{b.name}</div>
-              <div style={{ fontSize: 10.5, color: "var(--wf-text-faint)", marginTop: 2 }}>{b.desc}</div>
+              <div style={{ fontSize: 10.5, color: "var(--wf-text-muted)", marginTop: 2 }}>{b.desc}</div>
             </div>
           ))}
         </div>
@@ -5329,7 +5637,7 @@ function ReportsView({ tasks, focusLog }) {
         
         <div className="wf-reports-stat-grid">
           <div style={{ background: "var(--wf-hover-soft)", borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 12, color: "var(--wf-text-faint)", marginBottom: 6 }}>Công việc phân bổ</div>
+            <div style={{ fontSize: 12, color: "var(--wf-text-muted)", marginBottom: 6 }}>Công việc phân bổ</div>
             <div style={{ fontSize: 22, fontWeight: 800 }}>{filteredStats.total}</div>
           </div>
           <div style={{ background: "rgba(16,185,129,0.08)", borderRadius: 12, padding: 16 }}>
@@ -5337,7 +5645,7 @@ function ReportsView({ tasks, focusLog }) {
             <div style={{ fontSize: 22, fontWeight: 800, color: "#059669" }}>{filteredStats.done}</div>
           </div>
           <div style={{ background: "var(--wf-hover-soft)", borderRadius: 12, padding: 16 }}>
-            <div style={{ fontSize: 12, color: "var(--wf-text-faint)", marginBottom: 6 }}>Tỷ lệ hoàn thành</div>
+            <div style={{ fontSize: 12, color: "var(--wf-text-muted)", marginBottom: 6 }}>Tỷ lệ hoàn thành</div>
             <div style={{ fontSize: 22, fontWeight: 800 }}>{filteredStats.progressPct}%</div>
           </div>
           <div style={{ background: "rgba(236,72,153,0.08)", borderRadius: 12, padding: 16 }}>
@@ -5405,7 +5713,7 @@ function SettingsView({ darkMode, setDarkMode, soundOn, setSoundOn, showTeam, se
             </button>
           </div>
         </div>
-        <div style={{ fontSize: 11.5, color: "var(--wf-text-faint)" }}>Tên này hiển thị với các thành viên khác trong nhóm của bạn.</div>
+        <div style={{ fontSize: 11.5, color: "var(--wf-text-muted)" }}>Tên này hiển thị với các thành viên khác trong nhóm của bạn.</div>
       </div>
 
       <div style={{ background: "var(--wf-surface)", borderRadius: 20, padding: 20, boxShadow: "0 8px 20px rgba(26,32,53,0.06)" }}>
@@ -5443,7 +5751,7 @@ function SettingsView({ darkMode, setDarkMode, soundOn, setSoundOn, showTeam, se
           {rows.map((r) => (
             <div key={r.label} style={{ background: "var(--wf-hover-soft)", borderRadius: 12, padding: 14 }}>
               <div style={{ fontSize: 20, fontWeight: 800 }}>{r.value}</div>
-              <div style={{ fontSize: 11.5, color: "var(--wf-text-faint)" }}>{r.label}</div>
+              <div style={{ fontSize: 11.5, color: "var(--wf-text-muted)" }}>{r.label}</div>
             </div>
           ))}
         </div>
@@ -5585,7 +5893,7 @@ function CalendarView({ tasks, onOpenDetail }) {
                   Các công việc trong ngày ({dayTasks.length})
                 </h3>
                 {dayTasks.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: 40, color: "var(--wf-text-faint)" }}>
+                  <div style={{ textAlign: "center", padding: 40, color: "var(--wf-text-muted)" }}>
                     <Calendar size={48} opacity={0.2} style={{ marginBottom: 12 }} />
                     <div>Không có công việc nào trong ngày này</div>
                   </div>
