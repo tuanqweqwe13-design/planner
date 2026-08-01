@@ -76,7 +76,7 @@ import {
   CheckSquare, FolderLock, Users, FolderKanban, UserCog, LayoutDashboard,
   BarChart3, Settings, Plus, Bell, Clock, X, ChevronRight, ChevronLeft, Trash2, Check,
   Timer, Flame, Award, MessageSquare, Paperclip, Lock, ArrowLeft, ChevronDown, Repeat, CalendarClock, BookOpen, GripVertical, FileText,
-  Play, Pause, RotateCcw, Maximize2, Minimize2, TrendingUp, Calendar, Coffee, Sparkles, Volume2, VolumeX, Star, ChevronUp, PieChart, Zap, Link2, Edit2, User, FolderPlus
+  Play, Pause, RotateCcw, Maximize2, Minimize2, TrendingUp, Calendar, Coffee, Sparkles, Volume2, VolumeX, Star, ChevronUp, PieChart, Zap, Link2, Edit2, User, FolderPlus, Search
 } from "lucide-react";
 
 // ---------------- sound engine (synthesized, no assets needed) ----------------
@@ -294,6 +294,28 @@ const GlobalStyles = () => (
     .wf-sliding-tab.active { color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.2); }
     .wf-sliding-tab:not(.active) { color: var(--wf-text-muted); }
     .wf-sliding-tab:not(.active):hover { color: #8b5cf6; background: rgba(139,92,246,0.12); }
+
+    /* Planner rows — rounded cards with lift effect */
+    .wf-plan-row-card {
+      border-radius: 16px !important;
+      margin: 0 12px 12px 12px;
+      border: 1px solid var(--wf-border-soft) !important;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(26,32,53,0.05);
+      transition: box-shadow 0.25s cubic-bezier(0.34,1.56,0.64,1), transform 0.22s cubic-bezier(0.34,1.56,0.64,1), border-color 0.25s ease;
+      animation: wfFadeIn 0.3s ease both;
+    }
+    .wf-plan-row-card:hover:not(.wf-plan-row-dragging) {
+      box-shadow: 0 12px 30px rgba(109,40,217,0.16);
+      transform: translateY(-2px);
+      border-color: rgba(139,92,246,0.35) !important;
+    }
+    .wf-plan-row-card.wf-plan-row-dragover { border-color: #8b5cf6 !important; box-shadow: 0 0 0 3px rgba(139,92,246,0.22); }
+    .wf-plan-row-card.wf-plan-row-dragging { opacity: 0.5; }
+    .wf-plan-label-col { border-radius: 14px 0 0 14px; transition: filter 0.2s ease; }
+    .wf-plan-row-card:hover .wf-plan-label-col { filter: brightness(1.03); }
+    .wf-plan-lesson-item { transition: transform 0.15s cubic-bezier(0.34,1.56,0.64,1); }
+    .wf-plan-lesson-item:hover { transform: translateX(3px); }
 
     /* Course chips */
     .wf-plan-course-card { border-left: 4px solid var(--course-color, #8b5cf6); }
@@ -679,19 +701,47 @@ const hexToRgba = (hex, alpha) => {
   return `rgba(${r},${g},${b},${alpha})`;
 };
 
+const weekdayVN = (dateStr) => {
+  if (!dateStr) return "";
+  const d = new Date(dateStr + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  const days = ["CN", "Th 2", "Th 3", "Th 4", "Th 5", "Th 6", "Th 7"];
+  return days[d.getDay()];
+};
+
+const daysUntilLabel = (dateStr, todayStr) => {
+  if (!dateStr) return "";
+  const d1 = new Date(dateStr + "T00:00:00");
+  const d2 = new Date(todayStr + "T00:00:00");
+  if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return "";
+  const diff = Math.round((d1 - d2) / 86400000);
+  if (diff < 0) return "";
+  if (diff === 0) return "Hôm nay";
+  if (diff === 1) return "Còn 1 ngày";
+  return `Còn ${diff} ngày`;
+};
+
+const dateAccentColor = (dateStr) => {
+  const palette = ["#6366f1", "#10b981", "#f97316", "#ec4899", "#a855f7", "#eab308", "#06b6d4", "#ef4444"];
+  if (!dateStr) return palette[0];
+  let hash = 0;
+  for (let i = 0; i < dateStr.length; i++) hash = dateStr.charCodeAt(i) + ((hash << 5) - hash);
+  return palette[Math.abs(hash) % palette.length];
+};
+
 const getProjectTagStyle = (projName, projects) => {
-  if (!projName || projName === "Việc lẻ") return { background: "rgba(100,116,139,0.1)", color: "#64748b" };
+  if (!projName || projName === "Việc lẻ") return { background: "rgba(100,116,139,0.1)", color: "#64748b", border: "1px solid rgba(100,116,139,0.35)" };
   const p = projects.find(x => x.name === projName);
   if (p && p.grad) {
     const hex = (p.grad.match(/#([a-zA-Z0-9]{6})/g) || ["#6366f1"])[0];
-    return { background: hexToRgba(hex, 0.15), color: hex };
+    return { background: hexToRgba(hex, 0.15), color: hex, border: `1.5px solid ${hexToRgba(hex, 0.55)}` };
   }
   const colors = ["#6366f1", "#10b981", "#f97316", "#ec4899", "#a855f7", "#eab308", "#06b6d4", "#ef4444"];
   let hash = 0;
   for(let i=0; i<projName.length; i++) hash = projName.charCodeAt(i) + ((hash << 5) - hash);
   hash = Math.abs(hash);
   const hex = colors[hash % colors.length];
-  return { background: hexToRgba(hex, 0.15), color: hex };
+  return { background: hexToRgba(hex, 0.15), color: hex, border: `1.5px solid ${hexToRgba(hex, 0.55)}` };
 };
 
 const navSections = {
@@ -3332,7 +3382,7 @@ function TaskListView({ tasks, projects, onToggle, onCycle, onRemove, onOpenDeta
                 </div>
                 <div style={{ fontSize: 11.5, color: "var(--wf-text-muted)", display: "flex", alignItems: "center", gap: 5, marginTop: 2 }}>
                   {t.type === "personal" ? <Lock size={10} /> : null}
-                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>{t.project && <span style={{ ...getProjectTagStyle(t.project, projects), padding: "2px 8px", borderRadius: 6, fontWeight: 700, fontSize: 10 }}>{t.project || "Việc lẻ"}</span>}<span>· Hạn: {t.due} {t.due < todayStr && t.status !== "done" ? "🔥 Trễ hạn" : ""}</span></div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>{t.project && <span style={{ ...getProjectTagStyle(t.project, projects), padding: "2px 8px", borderRadius: 6, fontWeight: 700, fontSize: 10 }}>{t.project || "Việc lẻ"}</span>}<span>· Hạn: {t.due} {t.due < todayStr && t.status !== "done" ? "🔥 Trễ hạn" : (t.status !== "done" && daysUntilLabel(t.due, todayStr) ? `· ${daysUntilLabel(t.due, todayStr)}` : "")}</span></div>
                 </div>
               </div>
               <div className="wf-task-actions">
@@ -3528,7 +3578,7 @@ const applyFormat = (inputId, value, setValue, prefix, suffix = prefix) => {
   );
 
 
-  const RecursiveLessonNode = ({ node, level, indexPrefix, color, bgLight, onToggle, onRemove, onSetDate, onAddChild, onAddChildModule, onEditNode, onReorder, parentId, itemIndex, dragSource, dragTarget, setDragSource, setDragTarget, onGlobalDrop }) => {
+  const RecursiveLessonNode = ({ node, level, indexPrefix, color, bgLight, onToggle, onRemove, onSetDate, onAddChild, onAddChildModule, onEditNode, onReorder, parentId, itemIndex, dragSource, dragTarget, setDragSource, setDragTarget, onGlobalDrop, groupSamePrev, groupSameNext, groupAny }) => {
     const items = node.items || [];
     const [draft, setDraft] = useState("");
     const [expanded, setExpanded] = useState(true);
@@ -3623,7 +3673,7 @@ const applyFormat = (inputId, value, setValue, prefix, suffix = prefix) => {
                   borderBottom: false ? `2px solid ${color}` : "none",
                   transition: "opacity 0.15s"
                 }}>
-                <RecursiveLessonNode node={child} indexPrefix={indexPrefix ? `${indexPrefix}.${childIdx + 1}` : `${childIdx + 1}`} dragSource={dragSource} dragTarget={dragTarget} setDragSource={setDragSource} setDragTarget={setDragTarget} onGlobalDrop={onGlobalDrop} level={level + 1} color={color} bgLight={bgLight} onToggle={onToggle} onRemove={onRemove} onSetDate={onSetDate} onAddChild={onAddChild} onAddChildModule={onAddChildModule} onEditNode={onEditNode} onReorder={onReorder} parentId={node.id} itemIndex={childIdx} />
+                <RecursiveLessonNode node={child} indexPrefix={indexPrefix ? `${indexPrefix}.${childIdx + 1}` : `${childIdx + 1}`} dragSource={dragSource} dragTarget={dragTarget} setDragSource={setDragSource} setDragTarget={setDragTarget} onGlobalDrop={onGlobalDrop} level={level + 1} color={color} bgLight={bgLight} onToggle={onToggle} onRemove={onRemove} onSetDate={onSetDate} onAddChild={onAddChild} onAddChildModule={onAddChildModule} onEditNode={onEditNode} onReorder={onReorder} parentId={node.id} itemIndex={childIdx} groupSamePrev={!!(items[childIdx-1] && !items[childIdx-1].name && child.date && items[childIdx-1].date === child.date)} groupSameNext={!!(items[childIdx+1] && !items[childIdx+1].name && child.date && items[childIdx+1].date === child.date)} groupAny={!!(child.date && items.some((it,ii)=>ii!==childIdx && !it.name && it.date===child.date))} />
               </div>
             ))}
             {expanded && (isAddingTask || isAddingSubModule) && (
@@ -3650,15 +3700,19 @@ const applyFormat = (inputId, value, setValue, prefix, suffix = prefix) => {
     }
 
     // Is Lesson
+    const adjacentGrouped = groupSamePrev || groupSameNext;
+    const grouped = adjacentGrouped || groupAny;
+    const dateColor = grouped ? dateAccentColor(node.date) : color;
     return (
       <div style={{ display: "flex", flexDirection: "column" }}>
         <div className="wf-lesson-row" style={{ display: "flex", alignItems: "center", gap: 0,
           padding: `0 12px 0 ${12 + level*22}px`, 
           minHeight: 42, 
-          background: node.done ? "var(--wf-page-bg)" : "var(--wf-surface)",
+          background: node.done ? "var(--wf-page-bg)" : (grouped ? dateColor+"12" : "var(--wf-surface)"),
           position: "relative", 
-          borderBottom: "1px solid var(--wf-border-soft)",
-          borderLeft: level > 0 ? `3px solid ${color}30` : "none",
+          borderBottom: groupSameNext ? `1px dashed ${dateColor}70` : "1px solid var(--wf-border-soft)",
+          borderTop: (groupSameNext && !groupSamePrev) ? `1px dashed ${dateColor}70` : "none",
+          borderLeft: grouped ? `3px solid ${dateColor}80` : (level > 0 ? `3px solid ${color}30` : "none"),
           transition: "background 0.15s ease" }}>
           
           <div className="wf-drag-handle" style={{ width: 14, cursor: "grab", color: "var(--wf-text-muted)", opacity: 0.3, display: "flex", alignItems: "center", justifyContent: "center", marginRight: 4, transition: "opacity 0.2s" }}>
@@ -3696,8 +3750,12 @@ const applyFormat = (inputId, value, setValue, prefix, suffix = prefix) => {
               <button onClick={() => { setIsAddingTask(true); setExpanded(true); }} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-text-muted)", padding: 4, opacity: 0.8 }} title="Thêm việc con">
                 <Plus size={13} />
               </button>
+              {node.date && <span style={{ fontSize: 10, fontWeight: 800, color: dateColor, background: dateColor+"14", borderRadius: 5, padding: "2px 5px" }} title="Cùng ngày sẽ được nối vệt mờ">{weekdayVN(node.date)}</span>}
+              {node.date && !node.done && daysUntilLabel(node.date, todayStr) && (
+                <span style={{ fontSize: 9.5, fontWeight: 700, color: "var(--wf-text-muted)", whiteSpace: "nowrap" }}>{daysUntilLabel(node.date, todayStr)}</span>
+              )}
               <input type="date" value={node.date || ""} onChange={e => onSetDate(node.id, e.target.value)}
-                style={{ border: "none", background: "transparent", fontSize: 11.5, color: node.date ? "var(--wf-text-secondary)" : "var(--wf-text-muted)", outline: "none", width: 118, cursor: "pointer", fontFamily: "inherit" }} />
+                style={{ border: node.date ? `1px solid ${color}40` : "none", borderRadius: node.date ? 5 : 0, padding: node.date ? "2px 5px" : 0, background: node.date ? color+"14" : "transparent", fontSize: 11.5, fontWeight: node.date ? 800 : 400, color: node.date ? color : "var(--wf-text-muted)", outline: "none", width: 118, cursor: "pointer", fontFamily: "inherit" }} />
               <button onClick={() => onRemove(node.id)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-text-muted)", padding: 4, opacity: 0.8 }}>
                 <Trash2 size={13} />
               </button>
@@ -3720,7 +3778,7 @@ const applyFormat = (inputId, value, setValue, prefix, suffix = prefix) => {
                   borderBottom: false ? `2px solid ${color}` : "none",
                   transition: "opacity 0.15s"
                 }}>
-                <RecursiveLessonNode node={child} indexPrefix={indexPrefix ? `${indexPrefix}.${childIdx + 1}` : `${childIdx + 1}`} dragSource={dragSource} dragTarget={dragTarget} setDragSource={setDragSource} setDragTarget={setDragTarget} onGlobalDrop={onGlobalDrop} level={level + 1} color={color} bgLight={bgLight} onToggle={onToggle} onRemove={onRemove} onSetDate={onSetDate} onAddChild={onAddChild} onAddChildModule={onAddChildModule} onEditNode={onEditNode} onReorder={onReorder} parentId={node.id} itemIndex={childIdx} />
+                <RecursiveLessonNode node={child} indexPrefix={indexPrefix ? `${indexPrefix}.${childIdx + 1}` : `${childIdx + 1}`} dragSource={dragSource} dragTarget={dragTarget} setDragSource={setDragSource} setDragTarget={setDragTarget} onGlobalDrop={onGlobalDrop} level={level + 1} color={color} bgLight={bgLight} onToggle={onToggle} onRemove={onRemove} onSetDate={onSetDate} onAddChild={onAddChild} onAddChildModule={onAddChildModule} onEditNode={onEditNode} onReorder={onReorder} parentId={node.id} itemIndex={childIdx} groupSamePrev={!!(items[childIdx-1] && !items[childIdx-1].name && child.date && items[childIdx-1].date === child.date)} groupSameNext={!!(items[childIdx+1] && !items[childIdx+1].name && child.date && items[childIdx+1].date === child.date)} groupAny={!!(child.date && items.some((it,ii)=>ii!==childIdx && !it.name && it.date===child.date))} />
               </div>
             ))}
           </div>
@@ -3756,6 +3814,33 @@ function CoursePlannerView({ project, onUpdateProject, onSyncLessonTask }) {
   const [addingRootSubModules, setAddingRootSubModules] = useState({});
   const [rootSubModuleDrafts, setRootSubModuleDrafts] = useState({});
   const [addingRootLessons, setAddingRootLessons] = useState({});
+  const [editingRootDuration, setEditingRootDuration] = useState({});
+  const [rootDurationDrafts, setRootDurationDrafts] = useState({});
+  const [showAddMenu, setShowAddMenu] = useState({});
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filterModuleTree = (nodes, q) => {
+    if (!q) return nodes;
+    const query = q.toLowerCase();
+    const result = [];
+    for (const n of nodes) {
+      const label = (n.name || n.text || "").toLowerCase();
+      const selfMatch = label.includes(query);
+      if (n.items && n.items.length > 0) {
+        const filteredChildren = filterModuleTree(n.items, q);
+        if (selfMatch) {
+          result.push(n);
+        } else if (filteredChildren.length > 0) {
+          result.push({ ...n, items: filteredChildren });
+        }
+      } else if (selfMatch) {
+        result.push(n);
+      }
+    }
+    return result;
+  };
+
+  const displayModules = searchQuery.trim() ? filterModuleTree(modules, searchQuery.trim()) : modules;
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [dragIdx, setDragIdx] = React.useState(null);
   const [dragOverIdx, setDragOverIdx] = React.useState(null);
@@ -3948,26 +4033,59 @@ function CoursePlannerView({ project, onUpdateProject, onSyncLessonTask }) {
       display: "flex", flexDirection: "column", background: "var(--wf-surface)", borderRadius: 18, overflow: "hidden", boxShadow: "0 8px 32px rgba(26,32,53,0.08)", border: "1px solid var(--wf-border-soft)", minHeight: 400
     }}>
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 18px", borderBottom: "1px solid var(--wf-border-soft)", background: "var(--wf-page-bg)" }}>
-        <div style={{ fontWeight: 800, fontSize: 14, color: "var(--wf-text)", flex: 1 }}>{planName}</div>
-        <span style={{ fontSize: 11.5, fontWeight: 700, background: "rgba(99,102,241,0.1)", color: "#6366f1", padding: "3px 10px", borderRadius: 10 }}>{modules.length} module</span>
-        <span style={{ fontSize: 11.5, fontWeight: 700, background: "rgba(16,185,129,0.1)", color: "#10b981", padding: "3px 10px", borderRadius: 10 }}>{totalLessons} bài học</span>
-        {totalLessons > 0 && <span style={{ fontSize: 11.5, fontWeight: 700, background: "rgba(239,68,68,0.1)", color: "#ef4444", padding: "3px 10px", borderRadius: 10 }}>{totalLessons - doneLessons} deadline</span>}
-        <button onClick={() => setIsFullscreen(!isFullscreen)} style={{ background: "none", border: "none", color: "var(--wf-text-muted)", cursor: "pointer", display: "flex", alignItems: "center", padding: 4 }} title={isFullscreen ? "Thu nhỏ" : "Phóng to"}>
-          {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 20px", borderBottom: "1px solid var(--wf-border-soft)", background: "linear-gradient(135deg, var(--wf-page-bg) 0%, var(--wf-surface) 100%)" }}>
+        <div style={{ width: 30, height: 30, borderRadius: 9, background: "linear-gradient(135deg,#6d28d9,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, boxShadow: "0 3px 10px rgba(109,40,217,0.3)" }}>
+          <BookOpen size={15} color="#fff" />
+        </div>
+        <div style={{ fontWeight: 800, fontSize: 14.5, color: "var(--wf-text)", flex: 1 }}>{planName}</div>
+        {totalLessons > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, width: 80 }}>
+            <div style={{ flex: 1, height: 5, borderRadius: 5, background: "var(--wf-border-soft)", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: Math.round((doneLessons/totalLessons)*100)+"%", background: doneLessons===totalLessons ? "#10b981" : "linear-gradient(90deg,#6d28d9,#8b5cf6)", borderRadius: 5, transition: "width 0.4s ease" }} />
+            </div>
+            <span style={{ fontSize: 10.5, fontWeight: 800, color: "var(--wf-text-muted)" }}>{Math.round((doneLessons/totalLessons)*100)}%</span>
+          </div>
+        )}
+        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 700, background: "rgba(99,102,241,0.1)", color: "#6366f1", padding: "4px 11px", borderRadius: 20, boxShadow: "0 1px 3px rgba(99,102,241,0.12)" }}><FolderPlus size={11} />{modules.length} module</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 700, background: "rgba(16,185,129,0.1)", color: "#10b981", padding: "4px 11px", borderRadius: 20, boxShadow: "0 1px 3px rgba(16,185,129,0.12)" }}><Check size={11} />{doneLessons}/{totalLessons} bài học</span>
+        {totalLessons > 0 && <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11.5, fontWeight: 700, background: "rgba(239,68,68,0.1)", color: "#ef4444", padding: "4px 11px", borderRadius: 20, boxShadow: "0 1px 3px rgba(239,68,68,0.12)" }}><Clock size={11} />{totalLessons - doneLessons} còn lại</span>}
+        <button onClick={() => setIsFullscreen(!isFullscreen)} style={{ background: "var(--wf-hover-soft)", border: "none", borderRadius: 8, color: "var(--wf-text-muted)", cursor: "pointer", display: "flex", alignItems: "center", padding: 6 }} title={isFullscreen ? "Thu nhỏ" : "Phóng to"}>
+          {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
         </button>
       </div>
 
+      {/* Search bar */}
+      <div style={{ padding: "9px 20px", borderBottom: "1px solid var(--wf-border-soft)", background: "var(--wf-surface)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--wf-border-soft)", borderRadius: 9, padding: "6px 10px", background: "var(--wf-page-bg)" }}>
+          <Search size={14} color="var(--wf-text-muted)" style={{ flexShrink: 0 }} />
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="Tìm module / bài học..."
+            style={{ flex: 1, border: "none", background: "transparent", fontSize: 12.5, outline: "none", color: "var(--wf-text)", fontFamily: "inherit" }} />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-text-muted)", padding: 2, display: "flex" }} title="Xóa tìm kiếm">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Table Body */}
-      <div style={{ flex: 1, overflowY: "auto" }} className="wf-scrollbar">
+      <div style={{ flex: 1, overflowY: "auto", paddingTop: 12 }} className="wf-scrollbar">
         {modules.length === 0 && (
           <div style={{ textAlign: "center", padding: "48px 0", color: "var(--wf-text-muted)", fontSize: 13 }}>Chưa có module nào. Thêm module đầu tiên bên dưới!</div>
         )}
-        {modules.map((m, mi) => {
+        {modules.length > 0 && searchQuery.trim() && displayModules.length === 0 && (
+          <div style={{ textAlign: "center", padding: "48px 0", color: "var(--wf-text-muted)", fontSize: 13 }}>Không tìm thấy kết quả cho "{searchQuery}"</div>
+        )}
+        {displayModules.map((m, mi) => {
           const modColors = ["#6366f1", "#10b981", "#f97316", "#ec4899", "#a855f7", "#eab308", "#06b6d4", "#ef4444"];
           const modBgLight = ["#e0e7ff", "#d1fae5", "#ffedd5", "#fce7f3", "#f3e8ff", "#fef9c3", "#cffafe", "#fee2e2"];
-          const color = modColors[mi % modColors.length];
-          const bgLight = modBgLight[mi % modBgLight.length];
+          let hash = 0; for (let ci = 0; ci < m.id.length; ci++) { hash = (hash * 31 + m.id.charCodeAt(ci)) >>> 0; }
+          const colorIdx = hash % modColors.length;
+          const color = modColors[colorIdx];
+          const bgLight = modBgLight[colorIdx];
           const items = m.items || [];
           const modDone = items.filter(i => i.done).length;
           return (
@@ -3983,11 +4101,10 @@ function CoursePlannerView({ project, onUpdateProject, onSyncLessonTask }) {
               onDragOver={(e) => onDragOver(e, mi)}
               onDrop={() => onDrop(mi)}
               onDragEnd={onDragEnd}
-              style={{ display: "flex", borderBottom: `1px solid ${dragOverIdx===mi ? color : "var(--wf-border-soft)"}`,
-                opacity: dragIdx===mi ? 0.5 : 1, borderTop: dragOverIdx===mi && dragIdx!==null && dragIdx>mi ? `3px solid ${color}` : "none",
-                transition: "border-color 0.15s, opacity 0.15s" }}>
+              className={`wf-plan-row-card${dragIdx===mi ? " wf-plan-row-dragging" : ""}${dragOverIdx===mi ? " wf-plan-row-dragover" : ""}`}
+              style={{ display: "flex" }}>
               {/* Left: Module label */}
-              <div style={{ width: 172, flexShrink: 0, padding: "12px 12px 12px 14px",
+              <div className="wf-plan-label-col" style={{ width: 172, flexShrink: 0, padding: "12px 12px 12px 14px",
                 background: `linear-gradient(170deg, ${color}16 0%, ${color}08 100%)`,
                 borderRight: `3px solid ${color}`,
                 display: "flex", flexDirection: "column", gap: 5, cursor: "grab", userSelect: "none" }}>
@@ -4014,9 +4131,17 @@ function CoursePlannerView({ project, onUpdateProject, onSyncLessonTask }) {
                     <Trash2 size={12} />
                   </button>
                 </div>
-                <div style={{ fontSize: 10, color: color, fontWeight: 700, opacity: 0.85, display: "flex", alignItems: "center", gap: 4 }}>
-                  <BookOpen size={9} color={color} />{m.duration}
-                </div>
+                {editingRootDuration[m.id] ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <BookOpen size={9} color={color} />
+                    <input id={`edit-root-dur-${m.id}`} value={rootDurationDrafts[m.id] !== undefined ? rootDurationDrafts[m.id] : m.duration} onChange={e => setRootDurationDrafts({...rootDurationDrafts, [m.id]: e.target.value})} onKeyDown={e => { if (e.key === "Enter") { const val = (rootDurationDrafts[m.id] !== undefined ? rootDurationDrafts[m.id] : m.duration).trim(); if (val) onEditNode(m.id, {duration: val}); setEditingRootDuration({...editingRootDuration, [m.id]: false}); } }} onBlur={() => { const val = (rootDurationDrafts[m.id] !== undefined ? rootDurationDrafts[m.id] : m.duration).trim(); if (val) onEditNode(m.id, {duration: val}); setEditingRootDuration({...editingRootDuration, [m.id]: false}); }} autoFocus style={{ width: 62, border: `1px solid ${color}`, background: "var(--wf-surface)", fontSize: 10, outline: "none", color: "var(--wf-text)", padding: "2px 5px", borderRadius: 4, fontFamily: "inherit" }} />
+                  </div>
+                ) : (
+                  <div onClick={() => { setRootDurationDrafts({...rootDurationDrafts, [m.id]: m.duration}); setEditingRootDuration({...editingRootDuration, [m.id]: true}); }} style={{ fontSize: 10, color: color, fontWeight: 700, opacity: 0.85, display: "flex", alignItems: "center", gap: 4, cursor: "pointer" }} title="Bấm để sửa thời lượng">
+                    <BookOpen size={9} color={color} />{m.duration}
+                    <Edit2 size={8} style={{ opacity: 0.55 }} />
+                  </div>
+                )}
                 {items.length > 0 && (() => { let t=0,d=0; const cnt=(ns)=>{for(const n of ns){if(n.items&&n.items.length>0)cnt(n.items);else if(n.text){t++;if(n.done)d++;}}};cnt(items);const pct=t>0?Math.round((d/t)*100):0; return (
                   <div style={{ marginTop: 2 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
@@ -4032,6 +4157,11 @@ function CoursePlannerView({ project, onUpdateProject, onSyncLessonTask }) {
                   <GripVertical size={11} color={color} />
                   <span style={{ fontSize: 9, color: "var(--wf-text-muted)" }}>kéo thả</span>
                 </div>
+                {!showAddMenu[m.id] && !addingRootLessons[m.id] && (
+                  <button onClick={() => setShowAddMenu({...showAddMenu, [m.id]: true})} style={{ marginTop: 4, background: bgLight, border: "none", color: color, cursor: "pointer", fontSize: 10.5, fontWeight: 700, padding: "4px 8px", borderRadius: 6, display: "inline-flex", alignItems: "center", gap: 4, width: "fit-content" }} title="Thêm bài học / module con">
+                    <Plus size={11} /> Thêm
+                  </button>
+                )}
               </div>
 
               {/* Right: Lessons */}
@@ -4046,16 +4176,18 @@ function CoursePlannerView({ project, onUpdateProject, onSyncLessonTask }) {
                       onGlobalDrop(m.id, itemIdx);
                     }}
                     onDragEnd={() => { setDragSource(null); setDragTarget(null); }}
+                    className="wf-plan-lesson-item"
                     style={{
                       opacity: dragSource && dragSource.id === item.id ? 0.4 : 1,
                       borderTop: dragTarget && dragTarget.parentId === m.id && dragTarget.index === itemIdx && (!dragSource || dragSource.id !== item.id) ? `2px solid ${color}` : "none",
                       transition: "opacity 0.15s"
                     }}>
-                    <RecursiveLessonNode node={item} indexPrefix={`${mi + 1}.${itemIdx + 1}`} level={0} color={color} bgLight={bgLight} onToggle={onToggleLesson} onRemove={onRemoveLesson} onSetDate={onSetLessonDate} onAddChild={onAddLesson} onAddChildModule={onAddChildModule} onEditNode={onEditNode} onReorder={onReorderChildren} parentId={m.id} itemIndex={itemIdx} dragSource={dragSource} dragTarget={dragTarget} setDragSource={setDragSource} setDragTarget={setDragTarget} onGlobalDrop={onGlobalDrop} />
+                    <RecursiveLessonNode node={item} indexPrefix={`${mi + 1}.${itemIdx + 1}`} level={0} color={color} bgLight={bgLight} onToggle={onToggleLesson} onRemove={onRemoveLesson} onSetDate={onSetLessonDate} onAddChild={onAddLesson} onAddChildModule={onAddChildModule} onEditNode={onEditNode} onReorder={onReorderChildren} parentId={m.id} itemIndex={itemIdx} dragSource={dragSource} dragTarget={dragTarget} setDragSource={setDragSource} setDragTarget={setDragTarget} onGlobalDrop={onGlobalDrop} groupSamePrev={!!(items[itemIdx-1] && !items[itemIdx-1].name && item.date && items[itemIdx-1].date === item.date)} groupSameNext={!!(items[itemIdx+1] && !items[itemIdx+1].name && item.date && items[itemIdx+1].date === item.date)} groupAny={!!(item.date && items.some((it,ii)=>ii!==itemIdx && !it.name && it.date===item.date))} />
                   </div>
                 ))}
 
-                {/* Add lesson row */}
+                {/* Add lesson row - only rendered while actively adding, triggered from the parent module's own column */}
+                {(addingRootLessons[m.id] || showAddMenu[m.id]) && (
                 <div style={{ padding: "6px 14px", background: "var(--wf-hover-soft)", borderTop: items.length>0 ? "1px solid var(--wf-border-soft)" : "none" }}>
                   {addingRootLessons[m.id] ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 8, minHeight: 26 }}>
@@ -4080,9 +4212,13 @@ function CoursePlannerView({ project, onUpdateProject, onSyncLessonTask }) {
                           <Plus size={12} /> Module con
                         </button>
                       )}
+                      <button onClick={() => setShowAddMenu({...showAddMenu, [m.id]: false})} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-text-muted)", opacity: 0.6, padding: 2, marginLeft: "auto" }} title="Thu gọn">
+                        <ChevronUp size={13} />
+                      </button>
                     </div>
                   )}
                 </div>
+                )}
               </div>
             </div>
           );
@@ -4090,22 +4226,25 @@ function CoursePlannerView({ project, onUpdateProject, onSyncLessonTask }) {
       </div>
 
       {/* Footer */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 16px", borderTop: "1px solid var(--wf-border-soft)", background: "var(--wf-page-bg)" }}>
-        <input
-          id="input-new-module"
-          value={newModuleDraft}
-          onChange={e => setNewModuleDraft(e.target.value)}
-          onKeyDown={e => e.key==="Enter" && onAddModule()}
-          placeholder={"+ Thêm module mới..."}
-          style={{ flex: 1, border: "none", background: "transparent", fontSize: 12.5, outline: "none", color: "var(--wf-text)", fontFamily: "inherit" }} />
-        <FormatButtons inputId="input-new-module" value={newModuleDraft} setValue={setNewModuleDraft} />
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 16px", borderTop: "1px solid var(--wf-border-soft)", background: "var(--wf-page-bg)" }}>
+        <div style={{ flex: 1, display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--wf-border-soft)", background: "var(--wf-surface)", borderRadius: 10, padding: "3px 6px 3px 12px" }}>
+          <Plus size={14} color="var(--wf-text-muted)" style={{ flexShrink: 0 }} />
+          <input
+            id="input-new-module"
+            value={newModuleDraft}
+            onChange={e => setNewModuleDraft(e.target.value)}
+            onKeyDown={e => e.key==="Enter" && onAddModule()}
+            placeholder={"Thêm module mới..."}
+            style={{ flex: 1, border: "none", background: "transparent", fontSize: 12.5, outline: "none", color: "var(--wf-text)", fontFamily: "inherit" }} />
+          <FormatButtons inputId="input-new-module" value={newModuleDraft} setValue={setNewModuleDraft} />
+        </div>
         <input
           value={newModuleDuration}
           onChange={e => setNewModuleDuration(e.target.value)}
           placeholder="1 ngày"
-          style={{ width: 64, border: "1px solid var(--wf-border-soft)", borderRadius: 8, padding: "5px 8px", fontSize: 12, outline: "none", textAlign: "center", color: "var(--wf-text-secondary)", fontFamily: "inherit", background: "var(--wf-surface)" }} />
+          style={{ width: 68, border: "1px solid var(--wf-border-soft)", borderRadius: 10, padding: "8px 8px", fontSize: 12, outline: "none", textAlign: "center", color: "var(--wf-text-secondary)", fontFamily: "inherit", background: "var(--wf-surface)" }} />
         <button onClick={onAddModule}
-          style={{ background: "linear-gradient(135deg,#6d28d9,#8b5cf6)", color: "#fff", border: "none", borderRadius: 10, padding: "7px 16px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 4px 14px rgba(109,40,217,0.35)" }}>
+          style={{ background: "linear-gradient(135deg,#6d28d9,#8b5cf6)", color: "#fff", border: "none", borderRadius: 10, padding: "9px 18px", fontSize: 12.5, fontWeight: 800, cursor: "pointer", whiteSpace: "nowrap", boxShadow: "0 4px 14px rgba(109,40,217,0.35)" }}>
           + Thêm module
         </button>
       </div>
@@ -4871,7 +5010,7 @@ function TaskDetailModal({ task, onClose, onToggleSub, commentDraft, setCommentD
           </div>
           <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--wf-text-muted)", flexShrink: 0 }}><X size={18} /></button>
         </div>
-        <div style={{ fontSize: 12, color: "var(--wf-text-muted)", marginBottom: 14 }}>Hạn: {task.due} {task.due < todayStr && task.status !== "done" ? "· ⚠️ Trễ hạn" : ""}</div>
+        <div style={{ fontSize: 12, color: "var(--wf-text-muted)", marginBottom: 14 }}>Hạn: {task.due} {task.due < todayStr && task.status !== "done" ? "· ⚠️ Trễ hạn" : (task.status !== "done" && daysUntilLabel(task.due, todayStr) ? `· ${daysUntilLabel(task.due, todayStr)}` : "")}</div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
           <button onClick={() => onCycle(task.id)} style={badgeStyle(statusColor[task.status])}>{statusLabel[task.status]}</button>
